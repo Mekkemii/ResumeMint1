@@ -1,43 +1,118 @@
-# Настройка проекта - ResumeMint
+# Setup - Настройка ResumeMint
 
 ## 📋 Описание
 
-Пошаговое руководство по настройке проекта ResumeMint с Docker-оверлеем.
+Данный документ содержит подробные инструкции по настройке и развертыванию проекта ResumeMint. Включает установку зависимостей, конфигурацию переменных окружения и запуск всех компонентов.
 
 ## 🎯 Требования
 
 ### Системные требования
-- **Docker**: 20.10+
-- **Docker Compose**: 2.0+
-- **Операционная система**: Windows 10+, macOS 10.15+, Ubuntu 18.04+
-- **Память**: 4GB RAM (минимум)
-- **Дисковое пространство**: 2GB свободного места
+- **ОС**: Windows 10+, macOS 10.15+, Ubuntu 18.04+
+- **RAM**: Минимум 4GB, рекомендуется 8GB+
+- **Диск**: 2GB свободного места
+- **Сеть**: Стабильное интернет-соединение
 
 ### Программное обеспечение
-- **Docker Desktop** (для Windows/macOS)
-- **Docker Engine** (для Linux)
-- **Git** (для клонирования репозитория)
+- **Docker**: 20.10+
+- **Docker Compose**: 2.0+
+- **Git**: 2.30+
+- **Текстовый редактор**: VS Code, Sublime Text, или любой другой
 
-## 🚀 Быстрая настройка
+### API ключи
+- **OpenAI API**: Действующий API ключ с кредитами
+
+## 🚀 Быстрая установка
+
+### 1. Клонирование репозитория
+```bash
+# Клонировать проект
+git clone <repository-url>
+cd ResumeMint1
+
+# Проверить структуру
+ls -la
+```
+
+### 2. Настройка переменных окружения
+```bash
+# Скопировать пример конфигурации
+cp backend/env.example backend/.env
+
+# Отредактировать файл с вашим API ключом
+# Windows
+notepad backend\.env
+
+# macOS/Linux
+nano backend/.env
+```
+
+### 3. Запуск проекта
+```bash
+# Сборка и запуск всех контейнеров
+docker compose up --build
+
+# Или в фоновом режиме
+docker compose up -d --build
+```
+
+### 4. Проверка работоспособности
+```bash
+# Открыть в браузере
+http://localhost:8080
+
+# Проверить API
+curl http://localhost:8080/api/ping
+```
+
+## 📁 Структура проекта
+
+```
+ResumeMint1/
+├── 📁 backend/              # Backend API
+│   ├── server.js           # Основной сервер
+│   ├── package.json        # Зависимости
+│   ├── Dockerfile          # Контейнер
+│   ├── .env               # Переменные окружения
+│   └── env.example        # Пример конфигурации
+├── 📁 docker/              # Docker конфигурация
+│   ├── Dockerfile.web      # Nginx контейнер
+│   └── nginx/
+│       └── default.conf    # Nginx конфигурация
+├── 📁 docs/               # Документация
+├── index.html             # Frontend приложение
+├── globals.css            # Стили
+├── docker-compose.yml     # Оркестрация
+└── README.md              # Основная документация
+```
+
+## ⚙️ Детальная настройка
 
 ### 1. Установка Docker
 
 #### Windows
 ```bash
 # Скачать Docker Desktop
-https://www.docker.com/products/docker-desktop/
+# https://www.docker.com/products/docker-desktop
 
 # Установить и запустить
-# Перезагрузить компьютер после установки
+# Перезагрузить компьютер при необходимости
+
+# Проверить установку
+docker --version
+docker compose version
 ```
 
 #### macOS
 ```bash
-# Скачать Docker Desktop
-https://www.docker.com/products/docker-desktop/
+# Установить через Homebrew
+brew install --cask docker
 
-# Установить и запустить
-# Docker автоматически запустится при старте системы
+# Или скачать Docker Desktop
+# https://www.docker.com/products/docker-desktop
+
+# Запустить и проверить
+docker --version
+docker compose version
 ```
 
 #### Ubuntu/Debian
@@ -51,284 +126,443 @@ sudo apt install apt-transport-https ca-certificates curl gnupg lsb-release
 # Добавить GPG ключ Docker
 curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
 
-# Добавить репозиторий Docker
+# Добавить репозиторий
 echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 
 # Установить Docker
 sudo apt update
-sudo apt install docker-ce docker-ce-cli containerd.io
+sudo apt install docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
 # Добавить пользователя в группу docker
 sudo usermod -aG docker $USER
 
-# Запустить Docker
-sudo systemctl start docker
-sudo systemctl enable docker
+# Перезагрузить или перелогиниться
+newgrp docker
+
+# Проверить установку
+docker --version
+docker compose version
 ```
 
-### 2. Проверка установки Docker
+### 2. Настройка OpenAI API
 
+#### Получение API ключа
+1. Зарегистрироваться на [OpenAI Platform](https://platform.openai.com/)
+2. Перейти в раздел [API Keys](https://platform.openai.com/api-keys)
+3. Создать новый API ключ
+4. Скопировать ключ (начинается с `sk-`)
+
+#### Настройка переменных окружения
 ```bash
-# Проверить версию Docker
-docker --version
+# Отредактировать backend/.env
+OPENAI_API_KEY=sk-your-api-key-here
+PORT=5000
+NODE_ENV=production
+CORS_ORIGIN=http://localhost:8080
+CACHE_TTL=3600000
+MAX_FILE_SIZE=10485760
+MAX_JSON_SIZE=10485760
+```
 
-# Проверить версию Docker Compose
+### 3. Конфигурация Docker
+
+#### Проверка Docker Compose
+```bash
+# Проверить версию
 docker compose version
 
-# Проверить работу Docker
-docker run hello-world
+# Проверить конфигурацию
+docker compose config
 ```
 
-### 3. Клонирование проекта
-
+#### Настройка ресурсов (опционально)
 ```bash
-# Клонировать репозиторий
-git clone <repository-url>
-cd ResumeMint1
-
-# Проверить структуру проекта
-ls -la
+# Для Docker Desktop на Windows/macOS
+# Открыть Docker Desktop → Settings → Resources
+# Установить:
+# - Memory: 4GB+
+# - CPUs: 2+
+# - Disk: 20GB+
 ```
 
-### 4. Настройка переменных окружения
+### 4. Сборка и запуск
 
+#### Первоначальная сборка
 ```bash
-# Перейти в папку backend
-cd backend
+# Остановить существующие контейнеры
+docker compose down
 
-# Скопировать пример конфигурации
-cp env.example .env
+# Очистить кэш (если нужно)
+docker system prune -a
 
-# Отредактировать .env файл
-# Добавить ваш OpenAI API ключ
-nano .env
+# Сборка с пересозданием
+docker compose up --build --force-recreate
 ```
 
-**Содержимое .env файла:**
+#### Проверка контейнеров
 ```bash
-# OpenAI API Configuration
-OPENAI_API_KEY=sk-your-actual-api-key-here
+# Статус контейнеров
+docker compose ps
 
-# OpenAI Model Settings
-OPENAI_MODEL=gpt-3.5-turbo-0125
-OPENAI_TEMPERATURE=0.2
-MAX_TOKENS=2000
+# Логи
+docker compose logs
 
-# Server Configuration
+# Проверка сети
+docker network ls
+```
+
+## 🔧 Конфигурация
+
+### Переменные окружения
+
+#### Обязательные переменные
+```env
+# OpenAI API (обязательно)
+OPENAI_API_KEY=your-api-key-here
+
+# Server (опционально, есть значения по умолчанию)
 PORT=5000
-
-# Text Processing Configuration
-DISABLE_CONDENSE=true
-CONTEXT_LIMIT_TOKENS=100000
-
-# File Upload Configuration
-MAX_FILE_SIZE=10485760
-UPLOAD_DIR=uploads
-
-# CORS Configuration
+NODE_ENV=production
 CORS_ORIGIN=http://localhost:8080
 ```
 
-### 5. Получение OpenAI API ключа
+#### Дополнительные настройки
+```env
+# Кэширование
+CACHE_TTL=3600000          # 1 час в миллисекундах
 
-1. Зарегистрироваться на [OpenAI](https://platform.openai.com/)
-2. Перейти в раздел [API Keys](https://platform.openai.com/api-keys)
-3. Создать новый API ключ
-4. Скопировать ключ в .env файл
+# Лимиты
+MAX_FILE_SIZE=10485760     # 10MB в байтах
+MAX_JSON_SIZE=10485760     # 10MB в байтах
 
-### 6. Запуск проекта
-
-```bash
-# Вернуться в корневую папку
-cd ..
-
-# Собрать и запустить контейнеры
-docker compose up --build
-
-# Или запустить в фоновом режиме
-docker compose up -d --build
+# OpenAI модели
+OPENAI_MODEL=gpt-3.5-turbo-0125
+OPENAI_TEMPERATURE=0.2
+OPENAI_MAX_TOKENS=2000
 ```
 
-### 7. Проверка работы
+### Docker Compose настройки
 
-```bash
-# Проверить статус контейнеров
-docker compose ps
-
-# Проверить логи
-docker compose logs
-
-# Открыть в браузере
-http://localhost:8080
-```
-
-## 🔧 Детальная настройка
-
-### Настройка портов
-
-Если порты 8080 или 5000 заняты, измените их в `docker-compose.yml`:
-
+#### Портовая конфигурация
 ```yaml
 services:
   api:
     ports:
-      - "5001:5000"  # Изменить 5000 на 5001
-  
+      - "5000:5000"        # Backend API
   web:
     ports:
-      - "8081:80"    # Изменить 8080 на 8081
+      - "8080:80"          # Frontend + Nginx
 ```
 
-### Настройка CORS
-
-Для production окружения измените CORS_ORIGIN:
-
-```bash
-# В backend/.env
-CORS_ORIGIN=https://yourdomain.com
-
-# В docker-compose.yml
-environment:
-  - CORS_ORIGIN=https://yourdomain.com
+#### Изменение портов
+```yaml
+services:
+  api:
+    ports:
+      - "3000:5000"        # Backend на порту 3000
+  web:
+    ports:
+      - "9000:80"          # Frontend на порту 9000
 ```
 
-### Настройка лимитов
+### Nginx конфигурация
 
-Измените лимиты в `backend/.env`:
-
-```bash
-# Размер файла (в байтах)
-MAX_FILE_SIZE=20971520  # 20MB
-
-# Лимит токенов
-MAX_TOKENS=4000
-
-# Лимит контекста
-CONTEXT_LIMIT_TOKENS=200000
+#### Основные настройки
+```nginx
+server {
+    listen 80;
+    server_name _;
+    
+    # Статические файлы
+    root /usr/share/nginx/html;
+    index index.html;
+    
+    # SPA routing
+    location / {
+        try_files $uri /index.html;
+    }
+    
+    # API прокси
+    location /api/ {
+        proxy_pass http://api:5000/api/;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
 ```
 
 ## 🧪 Тестирование
 
 ### Проверка API
-
 ```bash
-# Проверка доступности API
+# Проверка работоспособности
 curl http://localhost:8080/api/ping
 
-# Проверка здоровья системы
-curl http://localhost:8080/api/health
-
-# Тест анализа резюме
-curl -X POST http://localhost:8080/api/analyze \
-  -H "Content-Type: application/json" \
-  -d '{"resumeText": "Тестовое резюме"}'
+# Ожидаемый ответ
+{
+  "status": "ok",
+  "timestamp": "2024-01-01T12:00:00Z",
+  "version": "1.0.0"
+}
 ```
 
-### Проверка фронтенда
-
-1. Откройте `http://localhost:8080` в браузере
-2. Проверьте загрузку страницы
-3. Протестируйте загрузку файла
-4. Проверьте анализ резюме
-
-### Проверка логов
-
+### Тест анализа резюме
 ```bash
-# Логи всех сервисов
+# Тестовый запрос
+curl -X POST http://localhost:8080/api/analyze \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resumeText": "Иван Иванов\nPython разработчик с 3 годами опыта..."
+  }'
+```
+
+### Проверка frontend
+1. Открыть `http://localhost:8080` в браузере
+2. Проверить загрузку всех элементов
+3. Протестировать загрузку файлов
+4. Проверить работу всех функций
+
+## 🔍 Отладка
+
+### Логи контейнеров
+```bash
+# Все логи
 docker compose logs
 
-# Логи backend
+# Логи конкретного сервиса
 docker compose logs api
-
-# Логи nginx
 docker compose logs web
 
 # Логи в реальном времени
 docker compose logs -f
+
+# Последние 100 строк
+docker compose logs --tail=100
 ```
 
-## 🔍 Отладка
-
-### Проблемы с Docker
-
+### Проверка состояния
 ```bash
-# Проверить статус Docker
-docker info
+# Статус контейнеров
+docker compose ps
 
-# Проверить доступные образы
-docker images
+# Использование ресурсов
+docker stats
 
-# Проверить запущенные контейнеры
-docker ps
-
-# Проверить сети
-docker network ls
+# Информация о контейнерах
+docker compose top
 ```
 
-### Проблемы с API
-
+### Вход в контейнеры
 ```bash
-# Войти в backend контейнер
+# Backend контейнер
 docker compose exec api sh
 
-# Проверить переменные окружения
-printenv | grep OPENAI
+# Nginx контейнер
+docker compose exec web sh
 
-# Проверить логи приложения
-tail -f /app/logs/app.log
+# Проверка файлов
+docker compose exec web ls -la /usr/share/nginx/html
 ```
 
-### Проблемы с сетью
+## 🚨 Устранение неполадок
 
+### Частые проблемы
+
+#### 1. Docker не установлен или не запущен
 ```bash
-# Проверить порты
+# Проверить статус Docker
+docker --version
+docker compose version
+
+# Запустить Docker Desktop (Windows/macOS)
+# Или запустить службу (Linux)
+sudo systemctl start docker
+sudo systemctl enable docker
+```
+
+#### 2. Порт уже занят
+```bash
+# Проверить занятые порты
 netstat -tulpn | grep :8080
 netstat -tulpn | grep :5000
 
-# Проверить доступность сервисов
-curl http://localhost:8080
-curl http://localhost:5000
+# Остановить процессы или изменить порты
+docker compose down
+# Изменить порты в docker-compose.yml
 ```
 
-## 🚀 Production настройка
-
-### SSL сертификаты
-
+#### 3. Неверный API ключ
 ```bash
-# Создать папку для сертификатов
-mkdir -p ssl
+# Проверить переменные окружения
+docker compose exec api env | grep OPENAI
 
-# Добавить сертификаты
-cp your-cert.pem ssl/
-cp your-key.pem ssl/
+# Пересоздать контейнеры
+docker compose down
+docker compose up --build
 ```
 
-### Обновление nginx конфигурации
-
-```nginx
-server {
-  listen 443 ssl;
-  server_name yourdomain.com;
-  
-  ssl_certificate /etc/ssl/cert.pem;
-  ssl_certificate_key /etc/ssl/key.pem;
-  
-  # ... остальная конфигурация
-}
-```
-
-### Переменные окружения для production
-
+#### 4. Проблемы с памятью
 ```bash
-NODE_ENV=production
-CORS_ORIGIN=https://yourdomain.com
-OPENAI_MODEL=gpt-4o-mini
-MAX_TOKENS=4000
+# Очистить неиспользуемые ресурсы
+docker system prune -a
+
+# Проверить использование
+docker stats
+
+# Увеличить лимиты в Docker Desktop
 ```
 
-## 🔗 Связанные файлы
+#### 5. Проблемы с сетью
+```bash
+# Проверить сети
+docker network ls
 
-- [Docker конфигурация](../docker/README.md)
-- [Environment настройки](../config/README.md)
+# Пересоздать сеть
+docker compose down
+docker network prune
+docker compose up
+```
+
+### Логи ошибок
+
+#### Backend ошибки
+```bash
+# Проверить логи backend
+docker compose logs api
+
+# Типичные ошибки:
+# - "Invalid OpenAI API key" → Проверить .env файл
+# - "Port already in use" → Изменить порт
+# - "ENOENT: no such file" → Проверить монтирование файлов
+```
+
+#### Nginx ошибки
+```bash
+# Проверить логи nginx
+docker compose logs web
+
+# Проверить конфигурацию
+docker compose exec web nginx -t
+
+# Перезапустить nginx
+docker compose exec web nginx -s reload
+```
+
+## 🔄 Обновления
+
+### Обновление проекта
+```bash
+# Получить последние изменения
+git pull origin main
+
+# Пересобрать контейнеры
+docker compose down
+docker compose up --build
+```
+
+### Обновление зависимостей
+```bash
+# Обновить базовые образы
+docker compose pull
+
+# Пересобрать с обновлениями
+docker compose build --no-cache
+docker compose up -d
+```
+
+### Обновление конфигурации
+```bash
+# Применить изменения конфигурации
+docker compose down
+docker compose up --build -d
+
+# Hot reload (для некоторых изменений)
+docker compose exec web nginx -s reload
+```
+
+## 📊 Мониторинг
+
+### Метрики производительности
+```bash
+# Использование ресурсов
+docker stats
+
+# Размер образов
+docker images
+
+# Использование диска
+docker system df
+```
+
+### Логирование
+```bash
+# Настройка логирования
+docker compose logs --tail=1000 > logs.txt
+
+# Мониторинг в реальном времени
+docker compose logs -f | grep ERROR
+```
+
+## 🔐 Безопасность
+
+### Рекомендации по безопасности
+1. **API ключи**: Хранить в `.env` файле, не коммитить в git
+2. **Порты**: Использовать нестандартные порты в production
+3. **Обновления**: Регулярно обновлять базовые образы
+4. **Доступ**: Ограничить доступ к Docker daemon
+
+### Production настройки
+```yaml
+# docker-compose.prod.yml
+version: '3.8'
+services:
+  api:
+    restart: always
+    environment:
+      - NODE_ENV=production
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+  web:
+    restart: always
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
+```
+
+## 📞 Поддержка
+
+### Полезные команды
+```bash
+# Полная перезагрузка
+docker compose down
+docker system prune -a
+docker compose up --build
+
+# Проверка здоровья
+curl http://localhost:8080/api/ping
+curl http://localhost:8080/api/health
+
+# Информация о системе
+docker info
+docker version
+```
+
+### Документация
+- [Основной README](../README.md)
+- [Docker документация](../docker/README.md)
 - [API документация](../api/README.md)
 - [Troubleshooting](../troubleshooting/README.md)
+
+---
+
+**Версия**: 1.0.0  
+**Последнее обновление**: 31.08.2025  
+**Статус**: Готов к production

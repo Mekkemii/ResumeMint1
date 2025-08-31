@@ -1,23 +1,38 @@
-# Развертывание - ResumeMint
+# Deployment - Развертывание ResumeMint
 
 ## 📋 Описание
 
-Руководство по развертыванию проекта ResumeMint в различных окружениях: локальном, staging и production.
+Данный документ содержит подробные инструкции по развертыванию проекта ResumeMint в различных средах: от локальной разработки до production серверов. Включает настройку серверов, конфигурацию безопасности и мониторинг.
 
-## 🏗️ Архитектура развертывания
+## 🎯 Среда развертывания
 
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   Nginx Proxy   │    │   Backend API   │
-│   (Static)      │◄──►│   (Port 8080)   │◄──►│   (Port 5000)   │
-│                 │    │                 │    │                 │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
+### Локальная разработка
+- **Цель**: Разработка и тестирование
+- **Сервер**: Локальный компьютер
+- **Трафик**: Низкий
+- **Безопасность**: Базовая
+
+### Staging/Testing
+- **Цель**: Тестирование перед production
+- **Сервер**: Тестовый сервер
+- **Трафик**: Средний
+- **Безопасность**: Production-подобная
+
+### Production
+- **Цель**: Рабочая среда
+- **Сервер**: Production сервер
+- **Трафик**: Высокий
+- **Безопасность**: Максимальная
 
 ## 🚀 Локальное развертывание
 
-### Docker Compose (рекомендуется)
+### Требования
+- Docker 20.10+
+- Docker Compose 2.0+
+- 4GB RAM
+- 2GB свободного места
 
+### Быстрый старт
 ```bash
 # Клонировать проект
 git clone <repository-url>
@@ -28,289 +43,470 @@ cp backend/env.example backend/.env
 # Отредактировать backend/.env
 
 # Запустить
-docker compose up --build
+docker compose up --build -d
 
 # Проверить
-http://localhost:8080
+curl http://localhost:8080/api/ping
 ```
 
-### Локальная разработка
-
-```bash
-# Backend
-cd backend
-npm install
-npm run dev
-
-# Frontend (в другом терминале)
-python -m http.server 8080
-# или
-npx serve -s . -l 8080
+### Конфигурация для разработки
+```yaml
+# docker-compose.dev.yml
+version: '3.8'
+services:
+  api:
+    environment:
+      - NODE_ENV=development
+      - DEBUG=true
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    ports:
+      - "5000:5000"
+  
+  web:
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html
+      - ./globals.css:/usr/share/nginx/html/globals.css
+    ports:
+      - "8080:80"
 ```
 
 ## 🌐 Staging развертывание
 
-### Подготовка
-
-```bash
-# Создать staging ветку
-git checkout -b staging
-
-# Обновить переменные окружения
-# backend/.env
-NODE_ENV=staging
-CORS_ORIGIN=https://staging.resumemint.com
-OPENAI_MODEL=gpt-3.5-turbo-0125
-```
-
-### Docker развертывание
-
-```bash
-# Собрать образы
-docker compose -f docker-compose.staging.yml build
-
-# Запустить
-docker compose -f docker-compose.staging.yml up -d
-
-# Проверить
-docker compose -f docker-compose.staging.yml ps
-```
-
-### docker-compose.staging.yml
-
-```yaml
-version: "3.9"
-services:
-  api:
-    build: ./backend
-    env_file: ./backend/.env
-    environment:
-      - NODE_ENV=staging
-      - CORS_ORIGIN=https://staging.resumemint.com
-    ports: ["5000:5000"]
-    restart: unless-stopped
-    volumes:
-      - ./logs:/app/logs
-
-  web:
-    build: .
-    dockerfile: ./docker/Dockerfile.web
-    depends_on: [api]
-    ports: ["8080:80"]
-    restart: unless-stopped
-    volumes:
-      - ./logs/nginx:/var/log/nginx
-```
-
-## 🏭 Production развертывание
+### Требования
+- VPS или облачный сервер
+- Ubuntu 20.04+ / CentOS 8+
+- 2GB RAM
+- 20GB дискового пространства
 
 ### Подготовка сервера
 
+#### Установка Docker
 ```bash
 # Обновить систему
 sudo apt update && sudo apt upgrade -y
 
+# Установить зависимости
+sudo apt install apt-transport-https ca-certificates curl gnupg lsb-release
+
+# Добавить GPG ключ Docker
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+
+# Добавить репозиторий
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+
 # Установить Docker
-curl -fsSL https://get.docker.com -o get-docker.sh
-sudo sh get-docker.sh
+sudo apt update
+sudo apt install docker-ce docker-ce-cli containerd.io docker-compose-plugin
 
 # Добавить пользователя в группу docker
 sudo usermod -aG docker $USER
+newgrp docker
 
-# Установить Docker Compose
-sudo curl -L "https://github.com/docker/compose/releases/download/v2.20.0/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-sudo chmod +x /usr/local/bin/docker-compose
+# Проверить установку
+docker --version
+docker compose version
 ```
 
-### SSL сертификаты
-
+#### Настройка файрвола
 ```bash
-# Установить Certbot
-sudo apt install certbot python3-certbot-nginx
+# Установить UFW
+sudo apt install ufw
 
-# Получить сертификат
-sudo certbot --nginx -d resumemint.com -d www.resumemint.com
+# Настроить правила
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow ssh
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+sudo ufw allow 8080/tcp
 
-# Автоматическое обновление
-sudo crontab -e
-# Добавить: 0 12 * * * /usr/bin/certbot renew --quiet
+# Включить файрвол
+sudo ufw enable
+sudo ufw status
 ```
 
-### Production конфигурация
+### Развертывание приложения
 
-#### docker-compose.prod.yml
+#### Клонирование и настройка
+```bash
+# Клонировать проект
+git clone <repository-url>
+cd ResumeMint1
 
+# Создать пользователя для приложения
+sudo useradd -r -s /bin/false resumemint
+sudo chown -R resumemint:resumemint /path/to/ResumeMint1
+
+# Настроить переменные окружения
+cp backend/env.example backend/.env
+nano backend/.env
+```
+
+#### Production конфигурация
 ```yaml
-version: "3.9"
+# docker-compose.staging.yml
+version: '3.8'
 services:
   api:
-    build: ./backend
-    env_file: ./backend/.env
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: resumemint-api-staging
+    restart: unless-stopped
     environment:
       - NODE_ENV=production
-      - CORS_ORIGIN=https://resumemint.com
-    ports: ["127.0.0.1:5000:5000"]
-    restart: unless-stopped
+      - PORT=5000
+      - CORS_ORIGIN=https://staging.resumemint.com
+    env_file:
+      - ./backend/.env
     volumes:
-      - ./logs:/app/logs
-      - ./uploads:/app/uploads
+      - ./backend:/app
+      - /app/node_modules
     networks:
-      - internal
+      - resumemint-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
 
   web:
-    build: .
-    dockerfile: ./docker/Dockerfile.web
-    depends_on: [api]
-    ports: ["80:80", "443:443"]
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    container_name: resumemint-web-staging
     restart: unless-stopped
+    ports:
+      - "8080:80"
     volumes:
-      - ./logs/nginx:/var/log/nginx
-      - /etc/letsencrypt:/etc/letsencrypt:ro
-      - ./ssl:/etc/ssl
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+      - ./globals.css:/usr/share/nginx/html/globals.css:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - api
     networks:
-      - internal
-      - external
+      - resumemint-network
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+          cpus: '0.25'
 
 networks:
-  internal:
+  resumemint-network:
     driver: bridge
-  external:
-    driver: bridge
+    name: resumemint-network-staging
 ```
 
-#### Production .env
-
+#### Запуск и мониторинг
 ```bash
-# OpenAI API Configuration
-OPENAI_API_KEY=sk-proj-...
-OPENAI_MODEL=gpt-4o-mini
-OPENAI_TEMPERATURE=0.2
-MAX_TOKENS=4000
+# Запустить приложение
+docker compose -f docker-compose.staging.yml up -d
 
-# Server Configuration
-PORT=5000
-NODE_ENV=production
+# Проверить статус
+docker compose -f docker-compose.staging.yml ps
 
-# Security
-CORS_ORIGIN=https://resumemint.com
+# Проверить логи
+docker compose -f docker-compose.staging.yml logs -f
 
-# Performance
-CONTEXT_LIMIT_TOKENS=200000
-MAX_FILE_SIZE=20971520
-
-# Monitoring
-LOG_LEVEL=info
+# Проверить работоспособность
+curl http://localhost:8080/api/ping
 ```
 
-### Nginx Production конфигурация
+## 🏭 Production развертывание
 
-#### docker/nginx/production.conf
+### Требования
+- Выделенный сервер или VPS
+- Ubuntu 22.04 LTS / CentOS 9
+- 4GB RAM (минимум)
+- 50GB SSD
+- Доменное имя
+- SSL сертификат
 
+### Подготовка сервера
+
+#### Системные требования
+```bash
+# Проверить системные ресурсы
+free -h
+df -h
+nproc
+
+# Обновить систему
+sudo apt update && sudo apt upgrade -y
+
+# Установить необходимые пакеты
+sudo apt install -y curl wget git htop nginx certbot python3-certbot-nginx
+```
+
+#### Настройка безопасности
+```bash
+# Создать пользователя для приложения
+sudo useradd -m -s /bin/bash resumemint
+sudo usermod -aG sudo resumemint
+
+# Настроить SSH
+sudo nano /etc/ssh/sshd_config
+# Отключить root логин
+# PermitRootLogin no
+# Изменить порт SSH
+# Port 2222
+
+# Перезапустить SSH
+sudo systemctl restart sshd
+
+# Настроить файрвол
+sudo ufw default deny incoming
+sudo ufw default allow outgoing
+sudo ufw allow 2222/tcp  # SSH
+sudo ufw allow 80/tcp    # HTTP
+sudo ufw allow 443/tcp   # HTTPS
+sudo ufw enable
+```
+
+### Развертывание с Nginx
+
+#### Установка и настройка Nginx
+```bash
+# Установить Nginx
+sudo apt install nginx
+
+# Создать конфигурацию
+sudo nano /etc/nginx/sites-available/resumemint
+```
+
+#### Nginx конфигурация
 ```nginx
-# HTTP to HTTPS redirect
 server {
     listen 80;
     server_name resumemint.com www.resumemint.com;
+    
+    # Редирект на HTTPS
     return 301 https://$server_name$request_uri;
 }
 
-# HTTPS server
 server {
     listen 443 ssl http2;
     server_name resumemint.com www.resumemint.com;
-
-    # SSL configuration
+    
+    # SSL конфигурация
     ssl_certificate /etc/letsencrypt/live/resumemint.com/fullchain.pem;
     ssl_certificate_key /etc/letsencrypt/live/resumemint.com/privkey.pem;
     ssl_protocols TLSv1.2 TLSv1.3;
     ssl_ciphers ECDHE-RSA-AES256-GCM-SHA512:DHE-RSA-AES256-GCM-SHA512:ECDHE-RSA-AES256-GCM-SHA384:DHE-RSA-AES256-GCM-SHA384;
     ssl_prefer_server_ciphers off;
-
-    # Security headers
+    
+    # Безопасность
     add_header X-Frame-Options DENY;
     add_header X-Content-Type-Options nosniff;
     add_header X-XSS-Protection "1; mode=block";
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
-
-    # Root directory
-    root /usr/share/nginx/html;
-    index index.html;
-
-    # Gzip compression
-    gzip on;
-    gzip_vary on;
-    gzip_min_length 1024;
-    gzip_types text/plain text/css text/xml text/javascript application/javascript application/xml+rss application/json;
-
-    # Static files caching
-    location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
-        expires 1y;
-        add_header Cache-Control "public, immutable";
-    }
-
-    # API proxy
-    location /api/ {
-        proxy_pass http://api:5000/api/;
+    
+    # Проксирование на Docker контейнеры
+    location / {
+        proxy_pass http://localhost:8080;
         proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
-        # Timeouts
-        proxy_connect_timeout 30s;
-        proxy_send_timeout 30s;
-        proxy_read_timeout 30s;
+        proxy_cache_bypass $http_upgrade;
     }
-
-    # SPA routing
-    location / {
-        try_files $uri $uri/ /index.html;
+    
+    # Статические файлы
+    location ~* \.(css|js|png|jpg|jpeg|gif|ico|svg)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+        proxy_pass http://localhost:8080;
     }
-
-    # Health check
-    location /health {
-        access_log off;
-        return 200 "healthy\n";
-        add_header Content-Type text/plain;
-    }
+    
+    # Gzip сжатие
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_proxied expired no-cache no-store private must-revalidate auth;
+    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss;
 }
 ```
 
-### Развертывание
-
+#### SSL сертификат
 ```bash
-# Клонировать проект
-git clone <repository-url>
-cd ResumeMint1
+# Получить SSL сертификат
+sudo certbot --nginx -d resumemint.com -d www.resumemint.com
 
-# Переключиться на production ветку
-git checkout production
-
-# Настроить переменные окружения
-cp backend/env.example backend/.env
-# Отредактировать backend/.env
-
-# Создать необходимые папки
-mkdir -p logs/nginx uploads ssl
-
-# Запустить
-docker compose -f docker-compose.prod.yml up -d --build
-
-# Проверить статус
-docker compose -f docker-compose.prod.yml ps
-docker compose -f docker-compose.prod.yml logs
+# Настроить автообновление
+sudo crontab -e
+# Добавить строку:
+# 0 12 * * * /usr/bin/certbot renew --quiet
 ```
 
-## 📊 Мониторинг
+### Docker конфигурация для production
+
+#### Production compose файл
+```yaml
+# docker-compose.prod.yml
+version: '3.8'
+services:
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: resumemint-api-prod
+    restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=5000
+      - CORS_ORIGIN=https://resumemint.com
+    env_file:
+      - ./backend/.env
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - resumemint-logs:/app/logs
+    networks:
+      - resumemint-network
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
+        reservations:
+          memory: 512M
+          cpus: '0.5'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  web:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.web
+    container_name: resumemint-web-prod
+    restart: always
+    ports:
+      - "127.0.0.1:8080:80"
+    volumes:
+      - ./index.html:/usr/share/nginx/html/index.html:ro
+      - ./globals.css:/usr/share/nginx/html/globals.css:ro
+      - ./docker/nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - resumemint-network
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+        reservations:
+          memory: 256M
+          cpus: '0.25'
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  resumemint-logs:
+    driver: local
+
+networks:
+  resumemint-network:
+    driver: bridge
+    name: resumemint-network-prod
+```
+
+#### Переменные окружения для production
+```env
+# backend/.env.prod
+OPENAI_API_KEY=your-production-api-key
+
+# Server
+PORT=5000
+NODE_ENV=production
+
+# CORS
+CORS_ORIGIN=https://resumemint.com
+
+# Cache
+CACHE_TTL=3600000
+
+# Limits
+MAX_FILE_SIZE=20971520
+MAX_JSON_SIZE=20971520
+
+# OpenAI
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_TEMPERATURE=0.2
+OPENAI_MAX_TOKENS=2000
+
+# Security
+RATE_LIMIT_WINDOW=900000
+RATE_LIMIT_MAX_REQUESTS=100
+```
+
+### Запуск и мониторинг
+
+#### Системный сервис
+```bash
+# Создать systemd сервис
+sudo nano /etc/systemd/system/resumemint.service
+```
+
+```ini
+[Unit]
+Description=ResumeMint Application
+Requires=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/opt/resumemint
+ExecStart=/usr/local/bin/docker-compose -f docker-compose.prod.yml up -d
+ExecStop=/usr/local/bin/docker-compose -f docker-compose.prod.yml down
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target
+```
+
+#### Запуск сервиса
+```bash
+# Включить автозапуск
+sudo systemctl enable resumemint
+
+# Запустить сервис
+sudo systemctl start resumemint
+
+# Проверить статус
+sudo systemctl status resumemint
+```
+
+## 📊 Мониторинг и логирование
 
 ### Логирование
 
+#### Настройка логов
 ```bash
-# Настройка logrotate
-sudo nano /etc/logrotate.d/resumemint
+# Создать директорию для логов
+sudo mkdir -p /var/log/resumemint
+sudo chown resumemint:resumemint /var/log/resumemint
 
-# Содержимое:
+# Настроить logrotate
+sudo nano /etc/logrotate.d/resumemint
+```
+
+```conf
 /var/log/resumemint/*.log {
     daily
     missingok
@@ -318,63 +514,168 @@ sudo nano /etc/logrotate.d/resumemint
     compress
     delaycompress
     notifempty
-    create 644 root root
+    create 644 resumemint resumemint
+    postrotate
+        systemctl reload resumemint
+    endscript
 }
+```
+
+#### Сбор логов
+```bash
+# Скрипт для сбора логов
+sudo nano /usr/local/bin/collect-logs.sh
+```
+
+```bash
+#!/bin/bash
+LOG_DIR="/var/log/resumemint"
+DATE=$(date +%Y%m%d_%H%M%S)
+
+# Собрать логи контейнеров
+docker compose -f /opt/resumemint/docker-compose.prod.yml logs > $LOG_DIR/containers_$DATE.log 2>&1
+
+# Собрать системные логи
+journalctl -u resumemint --since "1 hour ago" > $LOG_DIR/system_$DATE.log 2>&1
+
+# Собрать nginx логи
+sudo cp /var/log/nginx/access.log $LOG_DIR/nginx_access_$DATE.log
+sudo cp /var/log/nginx/error.log $LOG_DIR/nginx_error_$DATE.log
+
+# Очистить старые логов (старше 30 дней)
+find $LOG_DIR -name "*.log" -mtime +30 -delete
+```
+
+### Мониторинг
+
+#### Health checks
+```bash
+# Скрипт проверки здоровья
+sudo nano /usr/local/bin/health-check.sh
+```
+
+```bash
+#!/bin/bash
+API_URL="https://resumemint.com/api/ping"
+FRONTEND_URL="https://resumemint.com"
+LOG_FILE="/var/log/resumemint/health.log"
+
+# Проверка API
+API_STATUS=$(curl -s -o /dev/null -w "%{http_code}" $API_URL)
+if [ "$API_STATUS" = "200" ]; then
+    echo "$(date): ✅ API is healthy" >> $LOG_FILE
+else
+    echo "$(date): ❌ API is down (HTTP $API_STATUS)" >> $LOG_FILE
+    # Отправить уведомление
+    # curl -X POST "webhook_url" -d "API is down"
+fi
+
+# Проверка frontend
+FRONTEND_STATUS=$(curl -s -o /dev/null -w "%{http_code}" $FRONTEND_URL)
+if [ "$FRONTEND_STATUS" = "200" ]; then
+    echo "$(date): ✅ Frontend is healthy" >> $LOG_FILE
+else
+    echo "$(date): ❌ Frontend is down (HTTP $FRONTEND_STATUS)" >> $LOG_FILE
+fi
+```
+
+#### Cron задачи
+```bash
+# Настроить cron
+sudo crontab -e
+
+# Добавить задачи:
+# Каждые 5 минут - проверка здоровья
+*/5 * * * * /usr/local/bin/health-check.sh
+
+# Каждый час - сбор логов
+0 * * * * /usr/local/bin/collect-logs.sh
+
+# Каждый день в 2:00 - очистка старых логов
+0 2 * * * find /var/log/resumemint -name "*.log" -mtime +30 -delete
 ```
 
 ### Метрики
 
-```bash
-# Установить Prometheus Node Exporter
-docker run -d \
-  --name node-exporter \
-  --restart=unless-stopped \
-  -p 9100:9100 \
-  prom/node-exporter
+#### Prometheus + Grafana
+```yaml
+# docker-compose.monitoring.yml
+version: '3.8'
+services:
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+    networks:
+      - monitoring
 
-# Установить Grafana
-docker run -d \
-  --name grafana \
-  --restart=unless-stopped \
-  -p 3000:3000 \
-  grafana/grafana
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    networks:
+      - monitoring
+
+volumes:
+  grafana-data:
+
+networks:
+  monitoring:
+    driver: bridge
 ```
 
-### Алерты
+## 🔐 Безопасность
 
+### SSL/TLS
 ```bash
-# Создать скрипт мониторинга
-nano /usr/local/bin/monitor-resumemint.sh
+# Автоматическое обновление SSL
+sudo certbot renew --dry-run
 
-#!/bin/bash
-# Проверка доступности API
-if ! curl -f http://localhost:8080/api/health > /dev/null 2>&1; then
-    echo "ResumeMint API недоступен!" | mail -s "ResumeMint Alert" admin@resumemint.com
-fi
+# Проверка SSL конфигурации
+curl -I https://resumemint.com
+```
 
-# Проверка дискового пространства
-if [ $(df / | awk 'NR==2 {print $5}' | sed 's/%//') -gt 90 ]; then
-    echo "Диск почти заполнен!" | mail -s "ResumeMint Alert" admin@resumemint.com
-fi
+### Файрвол
+```bash
+# Дополнительные правила безопасности
+sudo ufw deny 22/tcp  # Блокировать стандартный SSH порт
+sudo ufw allow 2222/tcp  # Разрешить кастомный SSH порт
+sudo ufw deny 8080/tcp  # Блокировать прямой доступ к Docker
+```
+
+### Обновления
+```bash
+# Автоматические обновления безопасности
+sudo apt install unattended-upgrades
+sudo dpkg-reconfigure -plow unattended-upgrades
+
+# Обновление Docker образов
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
 ```
 
 ## 🔄 CI/CD
 
 ### GitHub Actions
-
-#### .github/workflows/deploy.yml
-
 ```yaml
+# .github/workflows/deploy.yml
 name: Deploy to Production
 
 on:
   push:
-    branches: [production]
+    branches: [ main ]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    
     steps:
     - uses: actions/checkout@v3
     
@@ -386,55 +687,55 @@ jobs:
         key: ${{ secrets.KEY }}
         script: |
           cd /opt/resumemint
-          git pull origin production
-          docker compose -f docker-compose.prod.yml down
-          docker compose -f docker-compose.prod.yml up -d --build
+          git pull origin main
+          docker compose -f docker-compose.prod.yml pull
+          docker compose -f docker-compose.prod.yml up -d
           docker system prune -f
 ```
 
-### Автоматическое обновление
+### Автоматическое развертывание
+```bash
+# Webhook для автоматического деплоя
+sudo nano /usr/local/bin/deploy-webhook.sh
+```
 
 ```bash
-# Создать скрипт обновления
-nano /usr/local/bin/update-resumemint.sh
-
 #!/bin/bash
 cd /opt/resumemint
-git pull origin production
-docker compose -f docker-compose.prod.yml down
-docker compose -f docker-compose.prod.yml up -d --build
+git pull origin main
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
 docker system prune -f
-
-# Добавить в crontab
-# 0 2 * * * /usr/local/bin/update-resumemint.sh
+echo "Deployment completed at $(date)" >> /var/log/resumemint/deploy.log
 ```
 
-## 🔐 Безопасность
+## 📞 Поддержка
 
-### Firewall
-
+### Полезные команды
 ```bash
-# Настроить UFW
-sudo ufw allow ssh
-sudo ufw allow 80
-sudo ufw allow 443
-sudo ufw enable
-```
+# Проверка статуса
+sudo systemctl status resumemint
+docker compose -f docker-compose.prod.yml ps
 
-### Обновления
+# Перезапуск
+sudo systemctl restart resumemint
 
-```bash
-# Автоматические обновления безопасности
-sudo apt install unattended-upgrades
-sudo dpkg-reconfigure -plow unattended-upgrades
+# Логи
+docker compose -f docker-compose.prod.yml logs -f
+sudo journalctl -u resumemint -f
+
+# Мониторинг ресурсов
+docker stats
+htop
 ```
 
 ### Резервное копирование
-
 ```bash
 # Скрипт резервного копирования
-nano /usr/local/bin/backup-resumemint.sh
+sudo nano /usr/local/bin/backup.sh
+```
 
+```bash
 #!/bin/bash
 BACKUP_DIR="/backup/resumemint"
 DATE=$(date +%Y%m%d_%H%M%S)
@@ -442,17 +743,16 @@ DATE=$(date +%Y%m%d_%H%M%S)
 # Создать резервную копию
 mkdir -p $BACKUP_DIR
 tar -czf $BACKUP_DIR/resumemint_$DATE.tar.gz \
-  --exclude=node_modules \
-  --exclude=.git \
-  /opt/resumemint
+  /opt/resumemint \
+  /var/log/resumemint \
+  /etc/nginx/sites-available/resumemint
 
 # Удалить старые резервные копии (старше 30 дней)
-find $BACKUP_DIR -name "resumemint_*.tar.gz" -mtime +30 -delete
+find $BACKUP_DIR -name "*.tar.gz" -mtime +30 -delete
 ```
 
-## 🔗 Связанные файлы
+---
 
-- [Docker конфигурация](../docker/README.md)
-- [Environment настройки](../config/README.md)
-- [Setup руководство](../setup/README.md)
-- [Troubleshooting](../troubleshooting/README.md)
+**Версия**: 1.0.0  
+**Последнее обновление**: 31.08.2025  
+**Статус**: Готов к production
