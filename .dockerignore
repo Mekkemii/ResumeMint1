@@ -1,0 +1,15 @@
+.git
+.github
+backend
+node_modules
+Dockerfile
+docker-compose.yml
+docker-compose.*.yml
+*.env
+.env*
+*.log
+*.md
+server
+tools
+docs
+resumemint-docs

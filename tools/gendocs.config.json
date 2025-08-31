@@ -1,0 +1,18 @@
+{
+  "roots": ["backend/src", "frontend/src"],
+  "include": ["**/*.ts", "**/*.tsx", "**/*.js", "**/*.jsx"],
+  "exclude": [
+    "**/*.d.ts",
+    "**/__tests__/**",
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/node_modules/**",
+    "**/dist/**",
+    "**/build/**"
+  ],
+  "outDir": "docs/code",
+  "indexFile": "docs/CODE_MAP.md",
+  "titlePrefix": "ResumeMint •",
+  "printSignatures": true,
+  "detectExpressRoutes": true
+}

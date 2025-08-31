@@ -1,0 +1,14 @@
+:root { --rm-container: 1100px; }
+
+/* общий контейнер для всех секций */
+.rm-container {
+  max-width: var(--rm-container);
+  margin-inline: auto;         /* строго по центру */
+  padding-inline: 16px;
+}
+
+/* чтобы центр не «гулял» из-за появления вертикального скроллбара */
+html { scrollbar-gutter: stable both-edges; }
+
+/* ювелирная подстройка для анализа секции */
+.rm-nudge { transform: translateX(10px); }
