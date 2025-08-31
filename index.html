@@ -1753,39 +1753,152 @@
                 if (!resume || !job) return setBlock('res-summary','Для матчинга нужны резюме и вакансия');
                 const btn = document.querySelector('[onclick="runCompareFromPanel()"]');
                 const prev = btn ? btn.textContent : '';
-                if (btn) { btn.disabled = true; btn.textContent = 'Считаем матчинг…'; }
-                const data = await postJSON('/api/analyze', { resumeText: resume, jobText: job });
+                if (btn) { btn.disabled = true; btn.textContent = 'Анализируем соответствие…'; }
+                
+                // Используем новый детальный endpoint
+                const data = await postJSON('/api/vacancy/detailed-match', { resumeText: resume, jobText: job });
                 
                 // Формируем HTML для результатов
                 let html = '';
                 
-                // Информация о вакансии (универсальная схема)
-                if (data.job_analysis) {
-                  html += `<div class="job-info">`;
-                  html += `<b>Требуемый грейд:</b> ${data.job_analysis.required_grade}`;
-                  if (Array.isArray(data.job_analysis.rationale) && data.job_analysis.rationale.length) {
-                    html += `<div class='opacity-80 text-sm' style='margin-top:6px;'>${safeText(data.job_analysis.rationale.join(' · '))}</div>`;
+                // Анализ вакансии
+                if (data.job) {
+                  html += `<div class="job-info" style="margin-bottom: 20px;">`;
+                  html += `<h4 style="color: #8b5cf6; margin-bottom: 8px;">📋 Анализ вакансии</h4>`;
+                  html += `<div style="margin-bottom: 12px;"><b>Описание:</b> ${data.job.job_summary || 'Не указано'}</div>`;
+                  
+                  if (data.job.job_grade) {
+                    html += `<div style="margin-bottom: 12px;"><b>Требуемый уровень:</b> ${data.job.job_grade.level} — ${data.job.job_grade.rationale}</div>`;
+                  }
+                  
+                  if (Array.isArray(data.job.requirements) && data.job.requirements.length) {
+                    html += `<div style="margin-bottom: 8px;"><b>Основные требования:</b></div>`;
+                    html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
+                    data.job.requirements.forEach(req => {
+                      html += `<li>${req}</li>`;
+                    });
+                    html += `</ul>`;
+                  }
+                  
+                  if (Array.isArray(data.job.nice_to_have) && data.job.nice_to_have.length) {
+                    html += `<div style="margin-top: 8px; margin-bottom: 8px;"><b>Желательные навыки:</b></div>`;
+                    html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
+                    data.job.nice_to_have.forEach(skill => {
+                      html += `<li>${skill}</li>`;
+                    });
+                    html += `</ul>`;
                   }
                   html += `</div>`;
                 }
                 
-                // Результаты сопоставления
-                if (data.match) {
-                  html += `<div class="match-info" style="margin-top: 16px;">`;
-                  html += `<b>Сопоставление:</b> покрытие ${data.match.coverage_ratio ?? '-'}% · итог: ${data.match.overall || '-'}`;
-                  if (Array.isArray(data.match.matrix) && data.match.matrix.length) {
-                    html += `<div class='opacity-80' style='margin-top:8px;'>`;
-                    html += `<b>Матрица требований (фрагмент):</b>`;
-                    const rows = data.match.matrix.slice(0, 5).map(r => `• ${r.requirement} — evidence: ${r.evidence}${r.comment ? ` (комментарий: ${r.comment})` : ''}`);
-                    html += `<div style='margin-top:4px; white-space:pre-wrap;'>${rows.join('\n')}</div>`;
-                    html += `</div>`;
+                // Анализ кандидата
+                if (data.candidate) {
+                  html += `<div class="candidate-info" style="margin-bottom: 20px;">`;
+                  html += `<h4 style="color: #10b981; margin-bottom: 8px;">👤 Анализ кандидата</h4>`;
+                  html += `<div style="margin-bottom: 12px;"><b>Описание:</b> ${data.candidate.candidate_summary || 'Не указано'}</div>`;
+                  
+                  if (data.candidate.candidate_grade) {
+                    html += `<div style="margin-bottom: 12px;"><b>Уровень кандидата:</b> ${data.candidate.candidate_grade.level} — ${data.candidate.candidate_grade.rationale}</div>`;
                   }
+                  
+                  if (Array.isArray(data.candidate.key_skills) && data.candidate.key_skills.length) {
+                    html += `<div style="margin-bottom: 8px;"><b>Ключевые навыки:</b></div>`;
+                    html += `<div style="opacity: 0.8;">${data.candidate.key_skills.join(', ')}</div>`;
+                  }
+                  
+                  if (data.candidate.experience_summary) {
+                    html += `<div style="margin-top: 8px;"><b>Опыт работы:</b></div>`;
+                    html += `<div style="opacity: 0.8;">${data.candidate.experience_summary}</div>`;
+                  }
+                  html += `</div>`;
+                }
+                
+                // Детальное сопоставление
+                if (data.match) {
+                  html += `<div class="match-info" style="margin-bottom: 20px;">`;
+                  html += `<h4 style="color: #f59e0b; margin-bottom: 8px;">🎯 Детальное сопоставление</h4>`;
+                  
+                  // Общий результат
+                  const matchColor = data.match.overall_match >= 70 ? '#10b981' : data.match.overall_match >= 40 ? '#f59e0b' : '#ef4444';
+                  html += `<div style="margin-bottom: 12px; font-size: 18px; font-weight: bold; color: ${matchColor};">`;
+                  html += `Общее соответствие: ${data.match.overall_match}%`;
+                  html += `</div>`;
+                  
+                  html += `<div style="margin-bottom: 12px;"><b>Соответствие уровню:</b> ${data.match.grade_fit}</div>`;
+                  html += `<div style="margin-bottom: 12px;"><b>Шансы на успех:</b> ${data.match.chances}</div>`;
+                  
+                  // Сильные стороны
+                  if (Array.isArray(data.match.strengths) && data.match.strengths.length) {
+                    html += `<div style="margin-bottom: 8px;"><b style="color: #10b981;">✅ Сильные стороны:</b></div>`;
+                    html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
+                    data.match.strengths.forEach(strength => {
+                      html += `<li>${strength}</li>`;
+                    });
+                    html += `</ul>`;
+                  }
+                  
+                  // Слабые стороны
+                  if (Array.isArray(data.match.weaknesses) && data.match.weaknesses.length) {
+                    html += `<div style="margin-top: 12px; margin-bottom: 8px;"><b style="color: #ef4444;">❌ Слабые стороны:</b></div>`;
+                    html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
+                    data.match.weaknesses.forEach(weakness => {
+                      html += `<li>${weakness}</li>`;
+                    });
+                    html += `</ul>`;
+                  }
+                  
+                  // Недостающие требования
+                  if (Array.isArray(data.match.missing_requirements) && data.match.missing_requirements.length) {
+                    html += `<div style="margin-top: 12px; margin-bottom: 8px;"><b style="color: #f59e0b;">⚠️ Чего не хватает:</b></div>`;
+                    html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
+                    data.match.missing_requirements.forEach(req => {
+                      html += `<li>${req}</li>`;
+                    });
+                    html += `</ul>`;
+                  }
+                  
+                  // Рекомендации
+                  if (Array.isArray(data.match.recommendations) && data.match.recommendations.length) {
+                    html += `<div style="margin-top: 12px; margin-bottom: 8px;"><b style="color: #8b5cf6;">💡 Рекомендации для улучшения:</b></div>`;
+                    html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
+                    data.match.recommendations.forEach(rec => {
+                      html += `<li>${rec}</li>`;
+                    });
+                    html += `</ul>`;
+                  }
+                  html += `</div>`;
+                }
+                
+                // Построчный анализ требований
+                if (Array.isArray(data.detailed_analysis) && data.detailed_analysis.length) {
+                  html += `<div class="detailed-analysis">`;
+                  html += `<h4 style="color: #6366f1; margin-bottom: 8px;">📊 Построчный анализ требований</h4>`;
+                  
+                  data.detailed_analysis.forEach((item, index) => {
+                    const statusColor = item.status === 'полное соответствие' ? '#10b981' : 
+                                       item.status === 'частичное соответствие' ? '#f59e0b' : '#ef4444';
+                    const statusIcon = item.status === 'полное соответствие' ? '✅' : 
+                                     item.status === 'частичное соответствие' ? '⚠️' : '❌';
+                    
+                    html += `<div style="margin-bottom: 16px; padding: 12px; border: 1px solid #374151; border-radius: 8px; background: rgba(255,255,255,0.02);">`;
+                    html += `<div style="margin-bottom: 8px;"><b>${index + 1}. ${item.requirement}</b></div>`;
+                    html += `<div style="margin-bottom: 6px; opacity: 0.8;"><b>Доказательства:</b> ${item.evidence || 'Не найдено'}</div>`;
+                    html += `<div style="margin-bottom: 6px; color: ${statusColor};">${statusIcon} <b>Статус:</b> ${item.status} (${item.score}%)</div>`;
+                    if (item.comment) {
+                      html += `<div style="opacity: 0.8; font-style: italic;">💬 ${item.comment}</div>`;
+                    }
+                    html += `</div>`;
+                  });
+                  
                   html += `</div>`;
                 }
                 
                 setBlock('res-summary', html);
                 if (btn) { btn.disabled = false; btn.textContent = prev; }
-            } catch (e) { setBlock('res-summary','Ошибка матчинга: ' + e.message); }
+            } catch (e) { 
+                setBlock('res-summary','Ошибка матчинга: ' + e.message); 
+                if (btn) { btn.disabled = false; btn.textContent = prev; }
+            }
         }
         
 
@@ -1816,9 +1929,154 @@
                 const job = document.getElementById('premium-job')?.value?.trim();
                 if (!resume || !job) return setBlock('res-match','Нужны резюме и вакансия');
                 
-                const data = await postJSON('/api/premium/oneshot', { resumeText: resume, jobText: job });
-                setBlock('res-match',`<b>Premium:</b> match ${data.match?.match_percent ?? '-'}%, grade ${data.resume?.grade ?? '-'}`);
-            } catch (e) { setBlock('res-match','Ошибка premium: ' + e.message); }
+                const btn = document.querySelector('[onclick="runPremiumFromPanel()"]');
+                const prev = btn ? btn.textContent : '';
+                if (btn) { btn.disabled = true; btn.textContent = 'Анализируем...'; }
+                
+                // Запускаем все анализы параллельно
+                const [detailedMatch, resumeAnalysis, coverLetter] = await Promise.all([
+                    postJSON('/api/vacancy/detailed-match', { resumeText: resume, jobText: job }),
+                    postJSON('/api/analyze', { resumeText: resume }),
+                    postJSON('/api/cover/generate', { resumeText: resume, jobText: job })
+                ]);
+                
+                // Анализ резюме
+                if (resumeAnalysis.analysis) {
+                    let html = '<div style="font-size: 14px;">';
+                    html += `<h4 style="font-size: 16px; color: #8b5cf6; margin-bottom: 8px;">📋 Анализ резюме</h4>`;
+                    html += `<div style="margin-bottom: 12px;"><b>Сводка:</b> ${resumeAnalysis.analysis.summary || 'Не указано'}</div>`;
+                    
+                    if (Array.isArray(resumeAnalysis.analysis.strengths) && resumeAnalysis.analysis.strengths.length) {
+                        html += `<div style="margin-bottom: 8px;"><b style="color: #10b981;">✅ Сильные стороны:</b></div>`;
+                        html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
+                        resumeAnalysis.analysis.strengths.forEach(strength => {
+                            html += `<li>${strength}</li>`;
+                        });
+                        html += `</ul>`;
+                    }
+                    
+                    if (Array.isArray(resumeAnalysis.analysis.weaknesses) && resumeAnalysis.analysis.weaknesses.length) {
+                        html += `<div style="margin-top: 12px; margin-bottom: 8px;"><b style="color: #ef4444;">❌ Области для улучшения:</b></div>`;
+                        html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
+                        resumeAnalysis.analysis.weaknesses.forEach(weakness => {
+                            html += `<li>${weakness}</li>`;
+                        });
+                        html += `</ul>`;
+                    }
+                    
+                    if (Array.isArray(resumeAnalysis.analysis.recommendations) && resumeAnalysis.analysis.recommendations.length) {
+                        html += `<div style="margin-top: 12px; margin-bottom: 8px;"><b style="color: #f59e0b;">💡 Рекомендации:</b></div>`;
+                        html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
+                        resumeAnalysis.analysis.recommendations.forEach(rec => {
+                            html += `<li>${rec}</li>`;
+                        });
+                        html += `</ul>`;
+                    }
+                    html += '</div>';
+                    setBlock('res-review', html);
+                }
+                
+                // Детальный матчинг
+                if (detailedMatch) {
+                    let html = '<div style="font-size: 14px;">';
+                    
+                    // Общий результат
+                    if (detailedMatch.match) {
+                        const matchColor = detailedMatch.match.overall_match >= 70 ? '#10b981' : 
+                                          detailedMatch.match.overall_match >= 40 ? '#f59e0b' : '#ef4444';
+                        html += `<div style="margin-bottom: 12px; font-size: 16px; font-weight: bold; color: ${matchColor};">`;
+                        html += `🎯 Общее соответствие: ${detailedMatch.match.overall_match}%`;
+                        html += `</div>`;
+                        
+                        html += `<div style="margin-bottom: 12px;"><b>Соответствие уровню:</b> ${detailedMatch.match.grade_fit}</div>`;
+                        html += `<div style="margin-bottom: 12px;"><b>Шансы на успех:</b> ${detailedMatch.match.chances}</div>`;
+                        
+                        // Сильные стороны
+                        if (Array.isArray(detailedMatch.match.strengths) && detailedMatch.match.strengths.length) {
+                            html += `<div style="margin-bottom: 8px;"><b style="color: #10b981;">✅ Сильные стороны:</b></div>`;
+                            html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
+                            detailedMatch.match.strengths.forEach(strength => {
+                                html += `<li>${strength}</li>`;
+                            });
+                            html += `</ul>`;
+                        }
+                        
+                        // Слабые стороны
+                        if (Array.isArray(detailedMatch.match.weaknesses) && detailedMatch.match.weaknesses.length) {
+                            html += `<div style="margin-top: 12px; margin-bottom: 8px;"><b style="color: #ef4444;">❌ Слабые стороны:</b></div>`;
+                            html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
+                            detailedMatch.match.weaknesses.forEach(weakness => {
+                                html += `<li>${weakness}</li>`;
+                            });
+                            html += `</ul>`;
+                        }
+                        
+                        // Недостающие требования
+                        if (Array.isArray(detailedMatch.match.missing_requirements) && detailedMatch.match.missing_requirements.length) {
+                            html += `<div style="margin-top: 12px; margin-bottom: 8px;"><b style="color: #f59e0b;">⚠️ Чего не хватает:</b></div>`;
+                            html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
+                            detailedMatch.match.missing_requirements.forEach(req => {
+                                html += `<li>${req}</li>`;
+                            });
+                            html += `</ul>`;
+                        }
+                        
+                        // Рекомендации
+                        if (Array.isArray(detailedMatch.match.recommendations) && detailedMatch.match.recommendations.length) {
+                            html += `<div style="margin-top: 12px; margin-bottom: 8px;"><b style="color: #8b5cf6;">💡 Рекомендации для улучшения:</b></div>`;
+                            html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
+                            detailedMatch.match.recommendations.forEach(rec => {
+                                html += `<li>${rec}</li>`;
+                            });
+                            html += `</ul>`;
+                        }
+                    }
+                    
+                    // Построчный анализ требований
+                    if (Array.isArray(detailedMatch.detailed_analysis) && detailedMatch.detailed_analysis.length) {
+                        html += `<div style="margin-top: 20px;">`;
+                        html += `<h4 style="font-size: 16px; color: #6366f1; margin-bottom: 8px;">📊 Построчный анализ требований</h4>`;
+                        
+                        detailedMatch.detailed_analysis.forEach((item, index) => {
+                            const statusColor = item.status === 'полное соответствие' ? '#10b981' : 
+                                              item.status === 'частичное соответствие' ? '#f59e0b' : '#ef4444';
+                            const statusIcon = item.status === 'полное соответствие' ? '✅' : 
+                                             item.status === 'частичное соответствие' ? '⚠️' : '❌';
+                            
+                            html += `<div style="margin-bottom: 16px; padding: 12px; border: 1px solid #374151; border-radius: 8px; background: rgba(255,255,255,0.02);">`;
+                            html += `<div style="margin-bottom: 8px;"><b>${index + 1}. ${item.requirement}</b></div>`;
+                            html += `<div style="margin-bottom: 6px; opacity: 0.8;"><b>Доказательства:</b> ${item.evidence || 'Не найдено'}</div>`;
+                            html += `<div style="margin-bottom: 6px; color: ${statusColor};">${statusIcon} <b>Статус:</b> ${item.status} (${item.score}%)</div>`;
+                            if (item.comment) {
+                                html += `<div style="opacity: 0.8; font-style: italic;">💬 ${item.comment}</div>`;
+                            }
+                            html += `</div>`;
+                        });
+                        
+                        html += `</div>`;
+                    }
+                    
+                    html += '</div>';
+                    setBlock('res-match', html);
+                }
+                
+                // Сопроводительное письмо
+                if (coverLetter && coverLetter.cover_letter) {
+                    let html = '<div style="font-size: 14px;">';
+                    html += `<h4 style="font-size: 16px; color: #10b981; margin-bottom: 8px;">📝 Сопроводительное письмо</h4>`;
+                    html += `<div style="padding: 16px; background: rgba(16, 185, 129, 0.1); border-radius: 8px; border-left: 4px solid #10b981;">`;
+                    html += `<div style="white-space: pre-wrap; line-height: 1.6;">${coverLetter.cover_letter}</div>`;
+                    html += `</div>`;
+                    html += '</div>';
+                    setBlock('res-cover', html);
+                }
+                
+                if (btn) { btn.disabled = false; btn.textContent = prev; }
+            } catch (e) { 
+                setBlock('res-match','Ошибка анализа: ' + e.message); 
+                const btn = document.querySelector('[onclick="runPremiumFromPanel()"]');
+                if (btn) { btn.disabled = false; btn.textContent = 'Запустить всё сразу'; }
+            }
         }
         
         // Функция создания окна ответов на вопросы
