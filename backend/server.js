@@ -1497,31 +1497,7 @@ app.post('/api/evaluate', async (req, res) => {
   }
 });
 
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({
-    error: 'Маршрут не найден',
-    code: 'ROUTE_NOT_FOUND',
-    path: req.originalUrl
-  });
-});
-
-// Error handler
-app.use((error, req, res, next) => {
-  console.error('Ошибка сервера:', error);
-  res.status(500).json({
-    success: false,
-    error: { message: error.message || 'Внутренняя ошибка сервера' }
-  });
-});
-
-// Запуск сервера
-app.listen(PORT, () => {
-  console.log(`🚀 ResumeMint API сервер запущен на порту ${PORT}`);
-  console.log(`🔗 API доступен по адресу: http://localhost:${PORT}/api`);
-});
-
-// Генерация сопроводительного письма
+// Генерация сопроводительного письма (должна быть ДО 404 handler)
 app.post('/api/cover/generate', async (req, res) => {
   try {
     const { resumeText, jobText } = req.body;
@@ -1560,6 +1536,30 @@ ${jobT}` }
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
+});
+
+// 404 handler
+app.use('*', (req, res) => {
+  res.status(404).json({
+    error: 'Маршрут не найден',
+    code: 'ROUTE_NOT_FOUND',
+    path: req.originalUrl
+  });
+});
+
+// Error handler
+app.use((error, req, res, next) => {
+  console.error('Ошибка сервера:', error);
+  res.status(500).json({
+    success: false,
+    error: { message: error.message || 'Внутренняя ошибка сервера' }
+  });
+});
+
+// Запуск сервера
+app.listen(PORT, () => {
+  console.log(`🚀 ResumeMint API сервер запущен на порту ${PORT}`);
+  console.log(`🔗 API доступен по адресу: http://localhost:${PORT}/api`);
 });
 
 module.exports = app;
