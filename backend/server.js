@@ -35,12 +35,44 @@ const PORT = process.env.PORT || 5000;
 console.log('=== INITIALIZATION DEBUG ===');
 console.log('OPENAI_API_KEY exists:', !!process.env.OPENAI_API_KEY);
 console.log('OPENAI_API_KEY length:', process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.length : 0);
-console.log('OPENAI_API_KEY start:', process.env.OPENAI_API_KEY ? process.env.OPENAI_API_KEY.substring(0, 10) + '...' : 'none');
 console.log('===========================');
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY || 'your-api-key-here'
 });
+
+// ===== Безопасная обработка ошибок OpenAI (маскировка ключей) =====
+function maskApiKeys(text) {
+  if (!text) return '';
+  try {
+    return String(text).replace(/sk-[A-Za-z0-9_\-]{10,}/g, 'sk-****');
+  } catch (_) {
+    return 'Ошибка';
+  }
+}
+
+function sanitizeOpenAIError(error) {
+  const status = error?.status || error?.response?.status || 500;
+  let message = error?.message || 'Ошибка внешнего AI сервиса';
+  message = maskApiKeys(message);
+
+  if (status === 401) {
+    message = 'Неверный или отсутствует OpenAI API ключ. Проверьте backend/.env.';
+  } else if (status === 429) {
+    message = 'Превышен лимит OpenAI API (429). Попробуйте позже.';
+  } else if (status === 400) {
+    message = 'Некорректный запрос к AI модели (400).';
+  } else if (status >= 500) {
+    message = 'Внешний AI сервис временно недоступен. Попробуйте позже.';
+  }
+
+  return { status: status || 500, message };
+}
+
+function respondModelError(res, error) {
+  const { status, message } = sanitizeOpenAIError(error);
+  return res.status(status).json({ error: message });
+}
 
 // Middleware
 app.use(cors());
@@ -638,8 +670,8 @@ ${resumeText}${additionalInfo}
     };
     
   } catch (error) {
-    console.error('❌ Ошибка OpenAI API:', error.message);
-    
+    console.error('❌ Ошибка OpenAI API:', maskApiKeys(error?.message || error));
+    console.error('Статус:', error?.status || error?.response?.status || 'n/a');
     // Возвращаем локальный анализ при ошибке API
     console.log('🔄 Используем локальный анализ из-за ошибки API');
     return performLocalAnalysis(resumeText, questions);
@@ -1040,7 +1072,7 @@ app.post('/api/resume/analyze', async (req, res) => {
     setCached(cacheKey, out);
     res.json(out);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    respondModelError(res, e);
   }
 });
 
@@ -1063,7 +1095,7 @@ app.post('/api/job/analyze', async (req, res) => {
     setCached(cacheKey, out);
     res.json(out);
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    respondModelError(res, e);
   }
 });
 
@@ -1092,9 +1124,7 @@ app.post('/api/job/compare', async (req, res) => {
     
     // Пользователю отправляем только полезные данные
     res.json(json);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { respondModelError(res, e); }
 });
 
 app.post('/api/match', async (req, res) => {
@@ -1112,9 +1142,7 @@ app.post('/api/match', async (req, res) => {
     
     // Пользователю отправляем только полезные данные
     res.json(json);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { respondModelError(res, e); }
 });
 
 app.post('/api/cover-letter', async (req, res) => {
@@ -1132,9 +1160,7 @@ app.post('/api/cover-letter', async (req, res) => {
     
     // Пользователю отправляем только полезные данные
     res.json(json);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { respondModelError(res, e); }
 });
 
 app.post('/api/premium/oneshot', async (req, res) => {
@@ -1162,9 +1188,7 @@ app.post('/api/premium/oneshot', async (req, res) => {
     
     // Пользователю отправляем только полезные данные
     res.json(json);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { respondModelError(res, e); }
 });
 
 // Parse .docx to text (for accordion uploads)
@@ -1173,9 +1197,7 @@ app.post('/api/parse/docx', uploadMemory.single('file'), async (req, res) => {
     if (!req.file) return res.status(400).json({ error: 'no file' });
     const { value } = await mammoth.extractRawText({ buffer: req.file.buffer });
     res.json({ text: (value || '').trim() });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { respondModelError(res, e); }
 });
 
 // Short & cheap: ATS only
@@ -1194,7 +1216,7 @@ app.post('/api/resume/ats', async (req, res) => {
     const out = { ...json, usage };
     setCached(cacheKey, out);
     res.json(out);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { respondModelError(res, e); }
 });
 
 // Short & cheap: Grade only
@@ -1213,7 +1235,7 @@ app.post('/api/resume/grade', async (req, res) => {
     const out = { ...json, usage };
     setCached(cacheKey, out);
     res.json(out);
-  } catch (e) { res.status(500).json({ error: e.message }); }
+  } catch (e) { respondModelError(res, e); }
 });
 
 // Combo endpoint: summary + job + match (без ATS/grade/cover)
@@ -1233,9 +1255,7 @@ app.post('/api/combo/summary-match', async (req, res) => {
     const out = { ...json, usage };
     setCached(cacheKey, out);
     res.json(out);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { respondModelError(res, e); }
 });
 
 // Улучшенный endpoint для детального матчинга вакансии
@@ -1260,9 +1280,7 @@ app.post('/api/vacancy/detailed-match', async (req, res) => {
     const out = { ...json, usage };
     setCached(cacheKey, out);
     res.json(out);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { respondModelError(res, e); }
 });
 
 // Экстрактивная ужимка резюме
@@ -1284,9 +1302,7 @@ app.post('/api/resume/condense', async (req, res) => {
     const out = { ...json, usage };
     setCached(cacheKey, out);
     res.json(out);
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+  } catch (e) { respondModelError(res, e); }
 });
 
 // Объединённая оценка резюме (HR + Grade + ATS)
