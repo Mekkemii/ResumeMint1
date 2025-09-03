@@ -1,6 +1,6 @@
 # ResumeMint - Анализ резюме и вакансий
 
-<!-- Vercel deployment update -->
+<!-- Vercel deployment update - PDF parsing support added -->
 ResumeMint Logo Version License Docker
 
 <div align="center">
