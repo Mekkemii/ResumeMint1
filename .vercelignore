@@ -1,14 +1,11 @@
-backend/
-docker/
-Dockerfile
-docker-compose.yml
-docs/
-pages/           # чтобы Vercel не пытался детектить Next
-*.md
-*.log
-.vercel/
-tools/
-resumemint-docs/
-components/
-.github/
+backend/              # Исключаем старый backend
+docker/              # Docker файлы
+pages/               # Next.js папки
+*.md                 # Документация (кроме PROJECT_MAP.md)
+node_modules/        # Зависимости
+.vercel/            # Временные файлы Vercel
+tools/               # Инструменты разработки
+resumemint-docs/     # Документация проекта
+components/          # Компоненты (если есть)
+.github/             # GitHub файлы
 
