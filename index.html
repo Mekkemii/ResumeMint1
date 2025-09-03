@@ -1626,6 +1626,49 @@
 
         // Legacy file handling functions removed - replaced by panel-based file inputs
 
+        // ===== File Upload Handler for Vercel Serverless =====
+        (function () {
+          function findRunButton() {
+            const byId = document.getElementById('run');
+            if (byId) return byId;
+            return Array.from(document.querySelectorAll('button'))
+              .find(b => (b.textContent || '').trim().toLowerCase().includes('запустить оценку резюме'));
+          }
+          function findFileInput() {
+            return document.getElementById('file') || document.querySelector('input[type="file"]');
+          }
+          function findTextarea() {
+            return document.getElementById('resume-text')
+              || Array.from(document.querySelectorAll('textarea'))
+                   .find(t => (t.placeholder || '').toLowerCase().includes('текст резюме'));
+          }
+
+          const runBtn = findRunButton();
+          const fileInput = findFileInput();
+          const textArea = findTextarea();
+
+          if (!runBtn || !fileInput) return; // тихо выходим, если верстка другая
+
+          runBtn.addEventListener('click', async (e) => {
+            const file = fileInput.files && fileInput.files[0];
+            if (!file) { alert('Выберите файл (.pdf/.docx/.txt)'); return; }
+
+            const fd = new FormData();
+            fd.append('file', file);
+
+            try {
+              const resp = await fetch('/api/parse', { method: 'POST', body: fd });
+              const data = await resp.json();
+              if (!resp.ok) throw new Error(data?.error || 'Parse error');
+
+              if (textArea) textArea.value = data.text || '';
+              alert('Файл распознан. Текст подставлен ниже.');
+            } catch (err) {
+              alert('Ошибка чтения файла: ' + err.message);
+            }
+          });
+        })();
+
         // ===== Checks Bar logic (calls backend endpoints) =====
         function setBlock(id, html) {
             const el = document.getElementById(id);
