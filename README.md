@@ -1,5 +1,8 @@
 # ResumeMint - Анализ резюме и вакансий
 
+<!-- Vercel deployment update -->
+ResumeMint Logo Version License Docker
+
 <div align="center">
 
 ![ResumeMint Logo](https://img.shields.io/badge/ResumeMint-AI%20Powered-blue?style=for-the-badge&logo=openai)
