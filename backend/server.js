@@ -183,9 +183,17 @@ async function extractTextFromFile(file) {
     const ocrEnabled = String(process.env.OCR_ENABLED || 'true').toLowerCase() !== 'false';
     const isImage = mime === 'image/jpeg' || mime === 'image/png' || ext === '.jpg' || ext === '.jpeg' || ext === '.png';
     if (ocrEnabled && isImage) {
-      const langs = process.env.OCR_LANGS || 'eng+rus';
-      const result = await Tesseract.recognize(filePath, langs);
-      return (result?.data?.text || '').trim() || '[OCR распознан, но текст пуст]';
+      try {
+        const langs = process.env.OCR_LANGS || 'eng+rus';
+        // Для tesseract.js v4.x используем правильный API
+        const result = await Tesseract.recognize(filePath, langs, {
+          logger: m => console.log('OCR:', m)
+        });
+        return (result?.data?.text || '').trim() || '[OCR распознан, но текст пуст]';
+      } catch (ocrError) {
+        console.error('OCR error:', ocrError);
+        return '[OCR ошибка: ' + (ocrError?.message || 'unknown') + ']';
+      }
     }
 
     return 'Неизвестный формат файла';
@@ -1221,27 +1229,47 @@ app.post('/api/premium/oneshot', async (req, res) => {
 // Parse .docx to text (for accordion uploads)
 app.post('/api/parse/docx', uploadMemory.single('file'), async (req, res) => {
   try {
+    console.log('=== DOCX PARSING DEBUG ===');
+    console.log('File received:', req.file ? {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      bufferLength: req.file.buffer?.length
+    } : 'NO FILE');
+    
     if (!req.file) return res.status(400).json({ error: 'no file' });
     
     // Проверяем, что файл действительно DOCX
     const ext = path.extname(req.file.originalname || '').toLowerCase();
     const mime = req.file.mimetype || '';
     
+    console.log('File validation:', { ext, mime });
+    
     if (ext !== '.docx' && mime !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
       return res.status(400).json({ error: 'Файл должен быть в формате DOCX' });
     }
     
+    console.log('Starting mammoth extraction...');
+    
     // Используем правильный синтаксис для mammoth с buffer
     const result = await mammoth.extractRawText({ buffer: req.file.buffer });
+    console.log('Mammoth result:', { 
+      hasValue: !!result.value, 
+      valueLength: result.value?.length,
+      messages: result.messages 
+    });
+    
     const text = (result.value || '').trim();
     
     if (!text) {
       return res.status(400).json({ error: 'Не удалось извлечь текст из DOCX файла' });
     }
     
+    console.log('DOCX parsing successful, text length:', text.length);
     res.json({ text });
   } catch (e) { 
     console.error('DOCX parsing error:', e);
+    console.error('Error stack:', e.stack);
     respondModelError(res, e); 
   }
 });
