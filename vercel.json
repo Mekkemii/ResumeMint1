@@ -4,7 +4,7 @@
   "outputDirectory": ".",
   "functions": {
     "backend/server.js": {
-      "runtime": "@vercel/node@22.x"
+      "runtime": "@vercel/node"
     }
   },
   "routes": [
