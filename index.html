@@ -1521,22 +1521,13 @@
                 });
             }
             
-            // Для docx/pdf — пробрасываем на бэкенд с правильным endpoint
+            // Для docx/pdf — используем новый единый endpoint
             const formData = new FormData();
             formData.append("file", file);
             
-            // Выбираем правильный endpoint в зависимости от типа файла
-            let endpoint = "/api/parse/docx"; // по умолчанию
+            console.log('Using /api/parse endpoint for file:', file.name, 'type:', file.type);
             
-            if (file.name.toLowerCase().endsWith('.pdf') || file.type === 'application/pdf') {
-                endpoint = "/api/parse/pdf";
-            } else if (file.name.toLowerCase().endsWith('.docx') || file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-                endpoint = "/api/parse/docx";
-            }
-            
-            console.log('Using endpoint:', endpoint, 'for file:', file.name, 'type:', file.type);
-            
-            const response = await fetch(endpoint, { method: "POST", body: formData });
+            const response = await fetch("/api/parse", { method: "POST", body: formData });
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.error || "Не удалось распарсить файл");
