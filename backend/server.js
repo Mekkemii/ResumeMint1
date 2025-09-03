@@ -18,6 +18,8 @@ const express = require('express');
 const cors = require('cors');
 const multer = require('multer');
 const mammoth = require('mammoth');
+const pdfParse = require('pdf-parse');
+const Tesseract = require('tesseract.js');
 const path = require('path');
 const fs = require('fs').promises;
 const OpenAI = require('openai');
@@ -128,7 +130,9 @@ const fileFilter = (req, file, cb) => {
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     'application/msword',
     'text/plain',
-    'application/pdf'
+    'application/pdf',
+    'image/jpeg',
+    'image/png'
   ];
   
   if (allowedTypes.includes(file.mimetype)) {
@@ -150,22 +154,45 @@ const upload = multer({
 // Memory upload for quick .docx parsing
 const uploadMemory = multer({ storage: multer.memoryStorage(), limits: { fileSize: 4 * 1024 * 1024, files: 1 } });
 
-// Простая функция для извлечения текста из файла
+// Извлечение текста: txt, pdf, docx, изображения (OCR)
 async function extractTextFromFile(file) {
   const filePath = file.path;
   const ext = path.extname(file.originalname).toLowerCase();
-  
-  if (ext === '.txt') {
-    return await fs.readFile(filePath, 'utf8');
-  } else if (ext === '.pdf') {
-    // Для PDF возвращаем заглушку, так как нужна библиотека pdf-parse
-    return `[PDF файл: ${file.originalname}] Содержимое PDF файла будет извлечено при полной настройке.`;
-  } else if (ext === '.docx' || ext === '.doc') {
-    // Для Word файлов возвращаем заглушку
-    return `[Word файл: ${file.originalname}] Содержимое Word файла будет извлечено при полной настройке.`;
+  const mime = file.mimetype;
+
+  try {
+    // Plain text
+    if (ext === '.txt' || mime === 'text/plain') {
+      return await fs.readFile(filePath, 'utf8');
+    }
+
+    // PDF via pdf-parse
+    if (ext === '.pdf' || mime === 'application/pdf') {
+      const buffer = await fs.readFile(filePath);
+      const data = await pdfParse(buffer);
+      return (data.text || '').trim() || '[PDF распознан, но текст пуст]';
+    }
+
+    // DOCX via mammoth
+    if (ext === '.docx' || mime === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      const { value } = await mammoth.extractRawText({ path: filePath });
+      return (value || '').trim() || '[DOCX распознан, но текст пуст]';
+    }
+
+    // Fallback OCR for images (jpeg/png)
+    const ocrEnabled = String(process.env.OCR_ENABLED || 'true').toLowerCase() !== 'false';
+    const isImage = mime === 'image/jpeg' || mime === 'image/png' || ext === '.jpg' || ext === '.jpeg' || ext === '.png';
+    if (ocrEnabled && isImage) {
+      const langs = process.env.OCR_LANGS || 'eng+rus';
+      const result = await Tesseract.recognize(filePath, langs);
+      return (result?.data?.text || '').trim() || '[OCR распознан, но текст пуст]';
+    }
+
+    return 'Неизвестный формат файла';
+  } catch (e) {
+    console.error('extractTextFromFile error:', e);
+    throw new Error('Не удалось извлечь текст файла: ' + (e?.message || 'unknown'));
   }
-  
-  return 'Неизвестный формат файла';
 }
 
 // ===== Helper: compact JSON chat =====
