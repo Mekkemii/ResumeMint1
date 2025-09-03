@@ -3,6 +3,7 @@ docker/
 Dockerfile
 docker-compose.yml
 docs/
+pages/           # чтобы Vercel не пытался детектить Next
 *.md
 *.log
 .vercel/

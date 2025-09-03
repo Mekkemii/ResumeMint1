@@ -8,7 +8,7 @@
     "check:json": "node -e \"JSON.parse(require('fs').readFileSync('package.json','utf8'))\""
   },
   "dependencies": {
-    "formidable": "^3.5.1",
+    "formidable": "2.1.2",
     "mammoth": "^1.6.0",
     "pdf-parse": "^1.1.1"
   }

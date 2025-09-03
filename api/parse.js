@@ -1,4 +1,4 @@
-// api/parse.js — Vercel Serverless Function (Node 22, CJS)
+// api/parse.js — Vercel Serverless (Node 22, CJS)
 const fs = require("fs");
 const formidable = require("formidable");
 const pdfParse = require("pdf-parse");
@@ -10,7 +10,7 @@ module.exports = async (req, res) => {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const form = formidable({ multiples: false, maxFileSize: 20 * 1024 * 1024 }); // 20MB
+  const form = formidable({ multiples: false, maxFileSize: 20 * 1024 * 1024 });
 
   form.parse(req, async (err, _fields, files) => {
     if (err) return res.status(400).json({ error: "Invalid form" });
@@ -27,6 +27,10 @@ module.exports = async (req, res) => {
         const buf = fs.readFileSync(file.filepath);
         const data = await pdfParse(buf);
         text = (data.text || "").trim();
+        if (!text || text.length < 20) {
+          // PDF без текстового слоя (скан). Тут нужен OCR — пока явно сообщим.
+          return res.status(422).json({ error: "PDF has no selectable text (likely scanned). Try DOCX or text-PDF." });
+        }
       } else if (
         mime === "application/vnd.openxmlformats-officedocument.wordprocessingml.document" ||
         /\.docx$/i.test(name)
@@ -39,14 +43,13 @@ module.exports = async (req, res) => {
         return res.status(415).json({ error: "Unsupported file type" });
       }
 
-      if (!text) return res.status(422).json({ error: "Failed to extract text" });
-
       return res.status(200).json({
         ok: true,
         text,
         meta: { filename: name, size: file.size || 0, type: mime },
       });
     } catch (e) {
+      console.error("parse error:", e);
       return res.status(500).json({ error: "Parse failure", detail: e.message });
     } finally {
       if (file?.filepath) fs.unlink(file.filepath, () => {});
