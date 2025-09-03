@@ -1222,9 +1222,28 @@ app.post('/api/premium/oneshot', async (req, res) => {
 app.post('/api/parse/docx', uploadMemory.single('file'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ error: 'no file' });
-    const { value } = await mammoth.extractRawText({ buffer: req.file.buffer });
-    res.json({ text: (value || '').trim() });
-  } catch (e) { respondModelError(res, e); }
+    
+    // Проверяем, что файл действительно DOCX
+    const ext = path.extname(req.file.originalname || '').toLowerCase();
+    const mime = req.file.mimetype || '';
+    
+    if (ext !== '.docx' && mime !== 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+      return res.status(400).json({ error: 'Файл должен быть в формате DOCX' });
+    }
+    
+    // Используем правильный синтаксис для mammoth с buffer
+    const result = await mammoth.extractRawText({ buffer: req.file.buffer });
+    const text = (result.value || '').trim();
+    
+    if (!text) {
+      return res.status(400).json({ error: 'Не удалось извлечь текст из DOCX файла' });
+    }
+    
+    res.json({ text });
+  } catch (e) { 
+    console.error('DOCX parsing error:', e);
+    respondModelError(res, e); 
+  }
 });
 
 // Short & cheap: ATS only
