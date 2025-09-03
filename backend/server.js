@@ -1274,6 +1274,55 @@ app.post('/api/parse/docx', uploadMemory.single('file'), async (req, res) => {
   }
 });
 
+// Parse .pdf to text (for accordion uploads)
+app.post('/api/parse/pdf', uploadMemory.single('file'), async (req, res) => {
+  try {
+    console.log('=== PDF PARSING DEBUG ===');
+    console.log('File received:', req.file ? {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size,
+      bufferLength: req.file.buffer?.length
+    } : 'NO FILE');
+    
+    if (!req.file) return res.status(400).json({ error: 'no file' });
+    
+    // Проверяем, что файл действительно PDF
+    const ext = path.extname(req.file.originalname || '').toLowerCase();
+    const mime = req.file.mimetype || '';
+    
+    console.log('File validation:', { ext, mime });
+    
+    if (ext !== '.pdf' && mime !== 'application/pdf') {
+      return res.status(400).json({ error: 'Файл должен быть в формате PDF' });
+    }
+    
+    console.log('Starting PDF parsing...');
+    
+    // Используем pdf-parse для извлечения текста
+    const result = await pdfParse(req.file.buffer);
+    console.log('PDF parse result:', { 
+      hasText: !!result.text, 
+      textLength: result.text?.length,
+      pages: result.numpages,
+      info: result.info
+    });
+    
+    const text = (result.text || '').trim();
+    
+    if (!text) {
+      return res.status(400).json({ error: 'Не удалось извлечь текст из PDF файла' });
+    }
+    
+    console.log('PDF parsing successful, text length:', text.length);
+    res.json({ text });
+  } catch (e) { 
+    console.error('PDF parsing error:', e);
+    console.error('Error stack:', e.stack);
+    res.status(400).json({ error: e.message || 'Не удалось распарсить файл' });
+  }
+});
+
 // Short & cheap: ATS only
 app.post('/api/resume/ats', async (req, res) => {
   try {
