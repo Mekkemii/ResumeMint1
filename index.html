@@ -674,6 +674,9 @@
             textarea {
                 min-height: 320px;
             }
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         @media (max-width: 768px) {
@@ -930,6 +933,47 @@
         .panel-actions {
             display: flex;
             justify-content: center;
+            position: sticky;
+            top: 8px;
+            z-index: 10;
+            background: rgba(20, 22, 34, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 8px 0;
+            margin: -8px 0 8px 0;
+        }
+        
+        /* Специальные стили для панели Premium */
+        #panel-premium .panel-actions {
+            position: sticky;
+            top: 8px;
+            z-index: 10;
+            background: rgba(20, 22, 34, 0.9);
+            backdrop-filter: blur(10px);
+            padding: 8px 0;
+            margin: -8px 0 8px 0;
+        }
+        
+        /* Стили для улучшения внешнего вида кнопки "Запустить всё сразу" */
+        .run-btn.premium {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .run-btn.premium::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .run-btn.premium:hover::before {
+            left: 100%;
         }
         .run-btn {
             padding: 12px 24px;
@@ -956,10 +1000,27 @@
         .run-btn.premium {
             background: linear-gradient(135deg, #f59e0b, #d97706);
             box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+            position: relative;
+            overflow: hidden;
         }
         .run-btn.premium:hover:not(:disabled) {
             background: linear-gradient(135deg, #d97706, #b45309);
             box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4);
+        }
+        
+        .run-btn.premium::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .run-btn.premium:hover::before {
+            left: 100%;
         }
         .file-input {
             margin-top: 8px;
@@ -1059,6 +1120,46 @@
             color: var(--text-2);
             min-height: 0;
             box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+        }
+        
+        /* Блок результатов — широкая карта на всю страницу */
+        .results-wide {
+            width: 100%;
+            margin-top: 16px;
+            background: #141622;
+            border: 1px solid #23263a;
+            border-radius: 14px;
+            box-shadow: 0 8px 24px rgba(0,0,0,.25);
+            padding: 16px;
+            /* Высота как на скрине: занимает большую часть экрана */
+            min-height: 72vh;
+        }
+
+        /* Внутри — 2 колонки: слева узкая сводка, справа подробности */
+        .results-grid {
+            display: grid;
+            grid-template-columns: 340px minmax(0, 1fr);
+            gap: 16px;
+            height: 100%;
+        }
+
+        /* Левая колонка (сводка) прокручивается при переполнении */
+        .results-sidebar {
+            background: #10121b;
+            border: 1px solid #23263a;
+            border-radius: 12px;
+            padding: 12px;
+            overflow: auto;
+        }
+
+        /* Правая колонка — большая область для текста/таблиц/блоков */
+        .results-main {
+            background: #0f111a;
+            border: 1px solid #23263a;
+            border-radius: 12px;
+            padding: 16px;
+            overflow: auto;
+            min-height: 100%;
         }
         /* Скрываем пустые карточки результатов */
         .check-card:empty {
@@ -1268,6 +1369,19 @@
                         <div id="res-match" class="check-card"></div>
                         <div id="res-cover" class="check-card" style="grid-column: 1/-1;"></div>
                     </div>
+                    
+                    <!-- Полноэкранный блок результатов -->
+                    <section id="results" class="results-wide" style="display:none;">
+                        <div class="results-grid">
+                            <aside class="results-sidebar" id="results-summary">
+                                <!-- сюда рендеришь «Общее соответствие, шансы, сильные/слабые стороны» -->
+                            </aside>
+
+                            <div class="results-main" id="results-details">
+                                <!-- сюда рендеришь развернутые блоки: сравнение по пунктам, текст письма, и т.п. -->
+                            </div>
+                        </div>
+                    </section>
 
                     <div id="loading" class="loading">
                         <div class="spinner"></div>
@@ -1486,8 +1600,12 @@
             setBlock('res-summary', '');
             setBlock('res-match', '');
             setBlock('res-cover', '');
+            setBlock('results-summary', '');
+            setBlock('results-details', '');
             const err = document.getElementById('error');
             if (err) { err.textContent = ''; err.style.display = 'none'; }
+            const resultsSection = document.getElementById('results');
+            if (resultsSection) { resultsSection.style.display = 'none'; }
         }
         
         // Обработчики файлов для каждой панели
@@ -2010,6 +2128,13 @@
                 const prev = btn ? btn.textContent : '';
                 if (btn) { btn.disabled = true; btn.textContent = 'Анализируем...'; }
                 
+                // Показываем полноэкранный блок результатов
+                const resultsSection = document.getElementById('results');
+                if (resultsSection) {
+                    resultsSection.style.display = 'block';
+                    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                
                 // Запускаем все анализы параллельно
                 const [detailedMatch, resumeAnalysis, coverLetter] = await Promise.all([
                     postJSON('/api/vacancy/detailed-match', { resumeText: resume, jobText: job }),
@@ -2017,102 +2142,117 @@
                     postJSON('/api/cover-letter', { resumeText: resume, vacancyText: job })
                 ]);
                 
+                // Формируем сводку для левой колонки
+                let summaryHtml = '<div style="font-size: 14px;">';
+                summaryHtml += `<h3 style="color: #8b5cf6; margin-bottom: 16px; font-size: 18px;">📊 Сводка анализа</h3>`;
+                
+                // Общий результат матчинга
+                if (detailedMatch?.match) {
+                    const matchColor = detailedMatch.match.overall_match >= 70 ? '#10b981' : 
+                                      detailedMatch.match.overall_match >= 40 ? '#f59e0b' : '#ef4444';
+                    summaryHtml += `<div style="margin-bottom: 16px; padding: 12px; background: rgba(139, 92, 246, 0.1); border-radius: 8px; border-left: 4px solid ${matchColor};">`;
+                    summaryHtml += `<div style="font-size: 20px; font-weight: bold; color: ${matchColor}; margin-bottom: 8px;">`;
+                    summaryHtml += `🎯 ${detailedMatch.match.overall_match}% соответствие`;
+                    summaryHtml += `</div>`;
+                    summaryHtml += `<div style="margin-bottom: 4px;"><b>Уровень:</b> ${detailedMatch.match.grade_fit}</div>`;
+                    summaryHtml += `<div><b>Шансы:</b> ${detailedMatch.match.chances}</div>`;
+                    summaryHtml += `</div>`;
+                }
+                
                 // Анализ резюме
-                if (resumeAnalysis.analysis) {
-                    let html = '<div style="font-size: 14px;">';
-                    html += `<h4 style="font-size: 16px; color: #8b5cf6; margin-bottom: 8px;">📋 Анализ резюме</h4>`;
-                    html += `<div style="margin-bottom: 12px;"><b>Сводка:</b> ${resumeAnalysis.analysis.summary || 'Не указано'}</div>`;
+                if (resumeAnalysis?.analysis) {
+                    summaryHtml += `<div style="margin-bottom: 16px;">`;
+                    summaryHtml += `<h4 style="color: #8b5cf6; margin-bottom: 8px; font-size: 16px;">📋 Резюме</h4>`;
+                    summaryHtml += `<div style="font-size: 13px; opacity: 0.9; margin-bottom: 8px;">${resumeAnalysis.analysis.summary || 'Не указано'}</div>`;
                     
                     if (Array.isArray(resumeAnalysis.analysis.strengths) && resumeAnalysis.analysis.strengths.length) {
-                        html += `<div style="margin-bottom: 8px;"><b style="color: #10b981;">✅ Сильные стороны:</b></div>`;
-                        html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
-                        resumeAnalysis.analysis.strengths.forEach(strength => {
-                            html += `<li>${strength}</li>`;
+                        summaryHtml += `<div style="margin-bottom: 6px;"><b style="color: #10b981; font-size: 13px;">✅ Сильные:</b></div>`;
+                        summaryHtml += `<ul style="margin: 0; padding-left: 16px; font-size: 12px; opacity: 0.8;">`;
+                        resumeAnalysis.analysis.strengths.slice(0, 3).forEach(strength => {
+                            summaryHtml += `<li>${strength}</li>`;
                         });
-                        html += `</ul>`;
+                        summaryHtml += `</ul>`;
+                    }
+                    summaryHtml += `</div>`;
+                }
+                
+                // Слабые стороны и рекомендации
+                if (detailedMatch?.match) {
+                    if (Array.isArray(detailedMatch.match.weaknesses) && detailedMatch.match.weaknesses.length) {
+                        summaryHtml += `<div style="margin-bottom: 16px;">`;
+                        summaryHtml += `<h4 style="color: #ef4444; margin-bottom: 8px; font-size: 16px;">❌ Слабые стороны</h4>`;
+                        summaryHtml += `<ul style="margin: 0; padding-left: 16px; font-size: 12px; opacity: 0.8;">`;
+                        detailedMatch.match.weaknesses.slice(0, 3).forEach(weakness => {
+                            summaryHtml += `<li>${weakness}</li>`;
+                        });
+                        summaryHtml += `</ul>`;
+                        summaryHtml += `</div>`;
+                    }
+                    
+                    if (Array.isArray(detailedMatch.match.recommendations) && detailedMatch.match.recommendations.length) {
+                        summaryHtml += `<div style="margin-bottom: 16px;">`;
+                        summaryHtml += `<h4 style="color: #f59e0b; margin-bottom: 8px; font-size: 16px;">💡 Рекомендации</h4>`;
+                        summaryHtml += `<ul style="margin: 0; padding-left: 16px; font-size: 12px; opacity: 0.8;">`;
+                        detailedMatch.match.recommendations.slice(0, 3).forEach(rec => {
+                            summaryHtml += `<li>${rec}</li>`;
+                        });
+                        summaryHtml += `</ul>`;
+                        summaryHtml += `</div>`;
+                    }
+                }
+                
+                summaryHtml += '</div>';
+                setBlock('results-summary', summaryHtml);
+                
+                // Формируем детальную информацию для правой колонки
+                let detailsHtml = '<div style="font-size: 14px;">';
+                
+                // Анализ резюме
+                if (resumeAnalysis?.analysis) {
+                    detailsHtml += `<div style="margin-bottom: 24px;">`;
+                    detailsHtml += `<h3 style="color: #8b5cf6; margin-bottom: 16px; font-size: 20px;">📋 Анализ резюме</h3>`;
+                    detailsHtml += `<div style="margin-bottom: 16px; padding: 16px; background: rgba(139, 92, 246, 0.1); border-radius: 8px; border-left: 4px solid #8b5cf6;">`;
+                    detailsHtml += `<div style="margin-bottom: 12px;"><b>Сводка:</b> ${resumeAnalysis.analysis.summary || 'Не указано'}</div>`;
+                    
+                    if (Array.isArray(resumeAnalysis.analysis.strengths) && resumeAnalysis.analysis.strengths.length) {
+                        detailsHtml += `<div style="margin-bottom: 8px;"><b style="color: #10b981;">✅ Сильные стороны:</b></div>`;
+                        detailsHtml += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
+                        resumeAnalysis.analysis.strengths.forEach(strength => {
+                            detailsHtml += `<li>${strength}</li>`;
+                        });
+                        detailsHtml += `</ul>`;
                     }
                     
                     if (Array.isArray(resumeAnalysis.analysis.weaknesses) && resumeAnalysis.analysis.weaknesses.length) {
-                        html += `<div style="margin-top: 12px; margin-bottom: 8px;"><b style="color: #ef4444;">❌ Области для улучшения:</b></div>`;
-                        html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
+                        detailsHtml += `<div style="margin-top: 12px; margin-bottom: 8px;"><b style="color: #ef4444;">❌ Области для улучшения:</b></div>`;
+                        detailsHtml += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
                         resumeAnalysis.analysis.weaknesses.forEach(weakness => {
-                            html += `<li>${weakness}</li>`;
+                            detailsHtml += `<li>${weakness}</li>`;
                         });
-                        html += `</ul>`;
+                        detailsHtml += `</ul>`;
                     }
                     
                     if (Array.isArray(resumeAnalysis.analysis.recommendations) && resumeAnalysis.analysis.recommendations.length) {
-                        html += `<div style="margin-top: 12px; margin-bottom: 8px;"><b style="color: #f59e0b;">💡 Рекомендации:</b></div>`;
-                        html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
+                        detailsHtml += `<div style="margin-top: 12px; margin-bottom: 8px;"><b style="color: #f59e0b;">💡 Рекомендации:</b></div>`;
+                        detailsHtml += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
                         resumeAnalysis.analysis.recommendations.forEach(rec => {
-                            html += `<li>${rec}</li>`;
+                            detailsHtml += `<li>${rec}</li>`;
                         });
-                        html += `</ul>`;
+                        detailsHtml += `</ul>`;
                     }
-                    html += '</div>';
-                    setBlock('res-review', html);
+                    detailsHtml += `</div>`;
+                    detailsHtml += `</div>`;
                 }
                 
                 // Детальный матчинг
                 if (detailedMatch) {
-                    let html = '<div style="font-size: 14px;">';
-                    
-                    // Общий результат
-                    if (detailedMatch.match) {
-                        const matchColor = detailedMatch.match.overall_match >= 70 ? '#10b981' : 
-                                          detailedMatch.match.overall_match >= 40 ? '#f59e0b' : '#ef4444';
-                        html += `<div style="margin-bottom: 12px; font-size: 16px; font-weight: bold; color: ${matchColor};">`;
-                        html += `🎯 Общее соответствие: ${detailedMatch.match.overall_match}%`;
-                        html += `</div>`;
-                        
-                        html += `<div style="margin-bottom: 12px;"><b>Соответствие уровню:</b> ${detailedMatch.match.grade_fit}</div>`;
-                        html += `<div style="margin-bottom: 12px;"><b>Шансы на успех:</b> ${detailedMatch.match.chances}</div>`;
-                        
-                        // Сильные стороны
-                        if (Array.isArray(detailedMatch.match.strengths) && detailedMatch.match.strengths.length) {
-                            html += `<div style="margin-bottom: 8px;"><b style="color: #10b981;">✅ Сильные стороны:</b></div>`;
-                            html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
-                            detailedMatch.match.strengths.forEach(strength => {
-                                html += `<li>${strength}</li>`;
-                            });
-                            html += `</ul>`;
-                        }
-                        
-                        // Слабые стороны
-                        if (Array.isArray(detailedMatch.match.weaknesses) && detailedMatch.match.weaknesses.length) {
-                            html += `<div style="margin-top: 12px; margin-bottom: 8px;"><b style="color: #ef4444;">❌ Слабые стороны:</b></div>`;
-                            html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
-                            detailedMatch.match.weaknesses.forEach(weakness => {
-                                html += `<li>${weakness}</li>`;
-                            });
-                            html += `</ul>`;
-                        }
-                        
-                        // Недостающие требования
-                        if (Array.isArray(detailedMatch.match.missing_requirements) && detailedMatch.match.missing_requirements.length) {
-                            html += `<div style="margin-top: 12px; margin-bottom: 8px;"><b style="color: #f59e0b;">⚠️ Чего не хватает:</b></div>`;
-                            html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
-                            detailedMatch.match.missing_requirements.forEach(req => {
-                                html += `<li>${req}</li>`;
-                            });
-                            html += `</ul>`;
-                        }
-                        
-                        // Рекомендации
-                        if (Array.isArray(detailedMatch.match.recommendations) && detailedMatch.match.recommendations.length) {
-                            html += `<div style="margin-top: 12px; margin-bottom: 8px;"><b style="color: #8b5cf6;">💡 Рекомендации для улучшения:</b></div>`;
-                            html += `<ul style="margin: 0; padding-left: 20px; opacity: 0.8;">`;
-                            detailedMatch.match.recommendations.forEach(rec => {
-                                html += `<li>${rec}</li>`;
-                            });
-                            html += `</ul>`;
-                        }
-                    }
+                    detailsHtml += `<div style="margin-bottom: 24px;">`;
+                    detailsHtml += `<h3 style="color: #10b981; margin-bottom: 16px; font-size: 20px;">🎯 Детальное сопоставление</h3>`;
                     
                     // Построчный анализ требований
                     if (Array.isArray(detailedMatch.detailed_analysis) && detailedMatch.detailed_analysis.length) {
-                        html += `<div style="margin-top: 20px;">`;
-                        html += `<h4 style="font-size: 16px; color: #6366f1; margin-bottom: 8px;">📊 Построчный анализ требований</h4>`;
+                        detailsHtml += `<div style="margin-bottom: 20px;">`;
+                        detailsHtml += `<h4 style="font-size: 16px; color: #6366f1; margin-bottom: 12px;">📊 Построчный анализ требований</h4>`;
                         
                         detailedMatch.detailed_analysis.forEach((item, index) => {
                             const statusColor = item.status === 'полное соответствие' ? '#10b981' : 
@@ -2120,37 +2260,37 @@
                             const statusIcon = item.status === 'полное соответствие' ? '✅' : 
                                              item.status === 'частичное соответствие' ? '⚠️' : '❌';
                             
-                            html += `<div style="margin-bottom: 16px; padding: 12px; border: 1px solid #374151; border-radius: 8px; background: rgba(255,255,255,0.02);">`;
-                            html += `<div style="margin-bottom: 8px;"><b>${index + 1}. ${item.requirement}</b></div>`;
-                            html += `<div style="margin-bottom: 6px; opacity: 0.8;"><b>Доказательства:</b> ${item.evidence || 'Не найдено'}</div>`;
-                            html += `<div style="margin-bottom: 6px; color: ${statusColor};">${statusIcon} <b>Статус:</b> ${item.status} (${item.score}%)</div>`;
+                            detailsHtml += `<div style="margin-bottom: 16px; padding: 12px; border: 1px solid #374151; border-radius: 8px; background: rgba(255,255,255,0.02);">`;
+                            detailsHtml += `<div style="margin-bottom: 8px;"><b>${index + 1}. ${item.requirement}</b></div>`;
+                            detailsHtml += `<div style="margin-bottom: 6px; opacity: 0.8;"><b>Доказательства:</b> ${item.evidence || 'Не найдено'}</div>`;
+                            detailsHtml += `<div style="margin-bottom: 6px; color: ${statusColor};">${statusIcon} <b>Статус:</b> ${item.status} (${item.score}%)</div>`;
                             if (item.comment) {
-                                html += `<div style="opacity: 0.8; font-style: italic;">💬 ${item.comment}</div>`;
+                                detailsHtml += `<div style="opacity: 0.8; font-style: italic;">💬 ${item.comment}</div>`;
                             }
-                            html += `</div>`;
+                            detailsHtml += `</div>`;
                         });
                         
-                        html += `</div>`;
+                        detailsHtml += `</div>`;
                     }
-                    
-                    html += '</div>';
-                    setBlock('res-match', html);
+                    detailsHtml += `</div>`;
                 }
                 
                 // Сопроводительное письмо
                 if (coverLetter && (coverLetter.coverLetter || coverLetter.letter || coverLetter.cover_letter)) {
-                    let html = '<div style="font-size: 14px;">';
-                    html += `<h4 style="font-size: 16px; color: #10b981; margin-bottom: 8px;">📝 Сопроводительное письмо</h4>`;
-                    html += `<div style="padding: 16px; background: rgba(16, 185, 129, 0.1); border-radius: 8px; border-left: 4px solid #10b981;">`;
-                    html += `<div style="white-space: pre-wrap; line-height: 1.6;">${coverLetter.coverLetter || coverLetter.letter || coverLetter.cover_letter}</div>`;
-                    html += `</div>`;
-                    html += '</div>';
-                    setBlock('res-cover', html);
+                    detailsHtml += `<div style="margin-bottom: 24px;">`;
+                    detailsHtml += `<h3 style="color: #10b981; margin-bottom: 16px; font-size: 20px;">📝 Сопроводительное письмо</h3>`;
+                    detailsHtml += `<div style="padding: 16px; background: rgba(16, 185, 129, 0.1); border-radius: 8px; border-left: 4px solid #10b981;">`;
+                    detailsHtml += `<div style="white-space: pre-wrap; line-height: 1.6;">${coverLetter.coverLetter || coverLetter.letter || coverLetter.cover_letter}</div>`;
+                    detailsHtml += `</div>`;
+                    detailsHtml += `</div>`;
                 }
+                
+                detailsHtml += '</div>';
+                setBlock('results-details', detailsHtml);
                 
                 if (btn) { btn.disabled = false; btn.textContent = prev; }
             } catch (e) { 
-                setBlock('res-match','Ошибка анализа: ' + e.message); 
+                setBlock('results-details','Ошибка анализа: ' + e.message); 
                 const btn = document.querySelector('[onclick="runPremiumFromPanel()"]');
                 if (btn) { btn.disabled = false; btn.textContent = 'Запустить всё сразу'; }
             }
