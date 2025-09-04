@@ -738,8 +738,6 @@
         /* ====== АДАПТИВ ====== */
         @media (max-width: 1024px){
           .grid-two{ display:grid; grid-template-columns:1fr; gap:12px; }
-          .results-grid{ grid-template-columns:1fr; }
-          .results-wide{ min-height:auto; padding:12px; }
           .text-area{ min-height:320px; }
         }
 
@@ -761,36 +759,70 @@
         /* === БАЗА ДЛЯ ВЫВОДА === */
         .results-wide{ width:100%; max-width:none; }
         .results-grid{ display:grid; grid-template-columns:340px minmax(0,1fr); gap:16px; }
-        .results-grid > *{ min-width:0; }          /* ВАЖНО: даём детям грида сжиматься */
         .results-sidebar,
         .results-main{
           max-width:100%;
           overflow-x:hidden;                       /* не вываливаться за экран */
           overflow-y:auto;
-          word-break:break-word;
-          overflow-wrap:anywhere;
           min-height:0;
-        }
-        .results-main pre,
-        .results-main code{
-          white-space:pre-wrap;                    /* длинные строки в коде/пре переносятся */
         }
         .results-main table{
           display:block; width:100%; overflow-x:auto; /* если придёт таблица */
         }
 
-        /* === МОБИЛКА: всё в ОДИН столбец, без бокового клипа === */
-        @media (max-width: 600px){
-          .results-wide{ padding:12px; min-height:auto; border-radius:12px; }
-          .results-grid{ grid-template-columns:1fr; gap:10px; }
-          .results-sidebar,.results-main{ padding:12px; }
-        }
 
         /* безопасные поля для экранов с вырезом */
         @supports (padding: max(0px)){
           .container{ padding-left:max(12px, env(safe-area-inset-left));
                       padding-right:max(12px, env(safe-area-inset-right)); }
         }
+
+        /* БАЗА: пусть дети грида могут сжиматься */
+        .results-grid > * { min-width: 0; }
+
+        /* ===== МОБИЛЬНЫЕ ОВЕРРАЙДЫ ===== */
+        @media (max-width: 600px) {
+          /* сам блок результата — никаких фикс. высот/скроллов */
+          .results-wide {
+            padding: 12px;
+            min-height: unset !important;
+            height: auto !important;
+            overflow: visible !important;
+            border-radius: 12px;
+          }
+
+          /* грид превращаем в обычный вертикальный поток */
+          .results-grid {
+            display: block !important;
+            height: auto !important;
+          }
+
+          /* и «Сводка», и «Детали» — обычные блоки без внутреннего скролла */
+          .results-sidebar,
+          .results-main {
+            max-height: none !important;
+            height: auto !important;
+            overflow: visible !important;
+            padding: 12px;
+          }
+
+          /* небольшой зазор между ними */
+          .results-sidebar + .results-main { margin-top: 10px; }
+        }
+
+        /* на планшете тоже складываемся в столбец, если нужно */
+        @media (max-width: 1024px) {
+          .results-grid { grid-template-columns: 1fr !important; }
+        }
+
+        /* длинные строки не ломают вёрстку */
+        .results-main,
+        .results-sidebar {
+          word-break: break-word;
+          overflow-wrap: anywhere;
+        }
+        .results-main pre,
+        .results-main code { white-space: pre-wrap; }
 
         /* файлы на мобиле */
         @media (max-width:600px){
