@@ -53,7 +53,7 @@
 
         /* Основной контент */
         .main-content {
-            background-color: white;
+            background-color: transparent;
             min-height: calc(100vh - 80px);
             position: relative;
         }
@@ -529,8 +529,8 @@
 
         /* Секция анализа резюме */
         .analysis-section {
-            padding: 60px 0;
-            background-color: #f8fafc;
+            padding: 40px 0;
+            background-color: transparent;
             display: none;
         }
 
@@ -540,7 +540,7 @@
             text-align: center;
             font-size: 32px;
             margin-bottom: 40px;
-            color: #1f2937;
+            color: #e7e7ea;
         }
 
         .form-container {
@@ -554,23 +554,27 @@
         .form-group {
             margin-bottom: 20px;
         }
-
-        label {
-            display: block;
+        
+        .form-group label {
+            font-size: 14px;
+            color: #9aa0b4;
             margin-bottom: 8px;
             font-weight: 600;
-            color: #374151;
         }
 
         textarea {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 6px;
-            min-height: 150px;
+            padding: 12px 14px;
+            border: 1px solid #2b2f45;
+            border-radius: 12px;
+            min-height: 420px;
             resize: vertical;
-            font-family: inherit;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
             font-size: 14px;
+            line-height: 1.35;
+            white-space: pre-wrap;
+            background: #0f111a;
+            color: #e7e7ea;
         }
 
         #jobText {
@@ -579,8 +583,8 @@
 
         textarea:focus {
             outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+            border-color: #8b5cf6;
+            box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.1);
         }
 
         /* Legacy file upload styles removed - replaced by panel-based file inputs */
@@ -663,6 +667,15 @@
         }
 
         /* Адаптивность */
+        @media (max-width: 1024px) {
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            textarea {
+                min-height: 320px;
+            }
+        }
+
         @media (max-width: 768px) {
             .hero-title {
                 font-size: 36px;
@@ -761,6 +774,14 @@
         /* Layout */
         .main-content { background: transparent; }
         .analysis-title { color: var(--text); }
+        
+        /* Full-width container */
+        .rm-container {
+            max-width: none;
+            width: min(1680px, 100%);
+            margin-inline: auto;
+            padding: 16px 24px;
+        }
 
         /* Buttons */
         .btn { border: 1px solid transparent; }
@@ -810,7 +831,7 @@
             border-color: var(--border);
             color: var(--text);
         }
-        textarea::placeholder { color: var(--text-3); }
+        textarea::placeholder { color: #6b7280; }
         textarea:focus { box-shadow: 0 0 0 3px var(--ring); border-color: var(--primary-strong); }
         .file-upload:hover { border-color: var(--primary); }
 
@@ -856,15 +877,15 @@
             border-radius: 12px; 
             font-size: 14px; 
             font-weight: 500;
-            border: 1px solid rgba(255, 255, 255, 0.1); 
-            background: rgba(255, 255, 255, 0.05); 
-            color: rgba(255, 255, 255, 0.9); 
+            border: 1px solid #2b2f45; 
+            background: #0f111a; 
+            color: #e7e7ea; 
             cursor: pointer;
             transition: all 0.2s;
         }
         .panel-btn:hover { 
-            background: rgba(255, 255, 255, 0.1); 
-            border-color: rgba(255, 255, 255, 0.2); 
+            background: #1a1d2e; 
+            border-color: #3b3f5c; 
             transform: translateY(-1px);
         }
         .panel-btn.active {
@@ -875,11 +896,12 @@
 
         /* Form panels */
         .form-panel {
-            background: rgba(0, 0, 0, 0.3);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 16px;
+            background: #141622;
+            border: 1px solid #23263a;
+            border-radius: 14px;
             padding: 20px;
             margin-bottom: 20px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
         }
         .panel-header {
             margin-bottom: 20px;
@@ -887,12 +909,12 @@
         .panel-header h3 {
             font-size: 18px;
             font-weight: 600;
-            color: white;
+            color: #e7e7ea;
             margin-bottom: 8px;
         }
         .panel-hint {
             font-size: 14px;
-            color: rgba(255, 255, 255, 0.7);
+            color: #9aa0b4;
             margin: 0;
         }
         .panel-content {
@@ -902,7 +924,7 @@
         }
         .form-row {
             display: grid;
-            grid-template-columns: 1fr 1fr;
+            grid-template-columns: minmax(420px, 1fr) minmax(420px, 1fr);
             gap: 20px;
         }
         .panel-actions {
@@ -915,14 +937,14 @@
             font-size: 16px;
             font-weight: 600;
             border: none;
-            background: linear-gradient(135deg, rgba(139, 92, 246, 0.8), rgba(236, 72, 153, 0.8));
+            background: linear-gradient(135deg, #8b5cf6, #a855f7);
             color: white;
             cursor: pointer;
             transition: all 0.2s;
             box-shadow: 0 4px 12px rgba(139, 92, 246, 0.3);
         }
         .run-btn:hover:not(:disabled) {
-            background: linear-gradient(135deg, rgba(139, 92, 246, 1), rgba(236, 72, 153, 1));
+            background: linear-gradient(135deg, #7c3aed, #9333ea);
             transform: translateY(-2px);
             box-shadow: 0 6px 16px rgba(139, 92, 246, 0.4);
         }
@@ -932,17 +954,24 @@
             transform: none;
         }
         .run-btn.premium {
-            background: linear-gradient(135deg, rgba(245, 158, 11, 0.8), rgba(239, 68, 68, 0.8));
+            background: linear-gradient(135deg, #f59e0b, #d97706);
             box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
         }
         .run-btn.premium:hover:not(:disabled) {
-            background: linear-gradient(135deg, rgba(245, 158, 11, 1), rgba(239, 68, 68, 1));
+            background: linear-gradient(135deg, #d97706, #b45309);
             box-shadow: 0 6px 16px rgba(245, 158, 11, 0.4);
         }
         .file-input {
             margin-top: 8px;
             font-size: 12px;
             color: rgba(255, 255, 255, 0.7);
+            background: transparent;
+            border: none;
+            cursor: pointer;
+        }
+        
+        .file-input:hover {
+            color: rgba(255, 255, 255, 0.9);
         }
 
         /* Стили для результатов оценки резюме */
@@ -1016,14 +1045,20 @@
             display: none !important;
         }
 
-        .checks-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; margin-top: 12px; }
+        .checks-grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); 
+            gap: 16px; 
+            margin-top: 16px; 
+        }
         .check-card { 
             background: linear-gradient(0deg, rgba(43,43,58,0.25), rgba(43,43,58,0.25)), var(--surface); 
             border: 1px solid var(--border); 
-            border-radius: 12px; 
-            padding: 12px; 
+            border-radius: 14px; 
+            padding: 16px; 
             color: var(--text-2);
             min-height: 0;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.25);
         }
         /* Скрываем пустые карточки результатов */
         .check-card:empty {

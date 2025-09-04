@@ -184,12 +184,12 @@ async function extractTextFromFile(file) {
     const isImage = mime === 'image/jpeg' || mime === 'image/png' || ext === '.jpg' || ext === '.jpeg' || ext === '.png';
     if (ocrEnabled && isImage) {
       try {
-        const langs = process.env.OCR_LANGS || 'eng+rus';
+      const langs = process.env.OCR_LANGS || 'eng+rus';
         // Для tesseract.js v4.x используем правильный API
         const result = await Tesseract.recognize(filePath, langs, {
           logger: m => console.log('OCR:', m)
         });
-        return (result?.data?.text || '').trim() || '[OCR распознан, но текст пуст]';
+      return (result?.data?.text || '').trim() || '[OCR распознан, но текст пуст]';
       } catch (ocrError) {
         console.error('OCR error:', ocrError);
         return '[OCR ошибка: ' + (ocrError?.message || 'unknown') + ']';
