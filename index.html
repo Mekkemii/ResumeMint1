@@ -700,10 +700,9 @@
           white-space: pre-wrap;
           overflow-wrap: anywhere;
           /* важно для авто-роста: */
-          overflow: hidden;      /* скрываем внутренний скролл */
-          resize: none;          /* отключаем «ручки», автосайз сделает лучше */
+          overflow: hidden;      /* по умолчанию без внутреннего скролла */
+          resize: none;          /* автосайз управляет высотой */
           min-height: 220px;     /* стартовая высота */
-          max-height: 80svh;     /* чтобы не улетало за экран при огромном тексте */
         }
 
         /* на маленьких экранах ручки можно вернуть, если нравится */
@@ -2608,9 +2607,9 @@
 
         // Legacy functions removed - no longer needed
 
-        // Умная автоподгонка высоты текстовых полей
+        // Умная автоподгонка высоты текстовых полей с всегда одинаковой высотой
         function initializeSmartTextareas() {
-            // Пары полей для синхронизации высоты на десктопе
+            // Пары полей для синхронизации высоты
             const textareaPairs = [
                 ['compare-resume', 'compare-job'],
                 ['cover-resume', 'cover-job'], 
@@ -2619,29 +2618,34 @@
             
             // Одиночные поля
             const singleTextareas = ['review-resume'];
+            const CAP_VH = 85; // максимальная высота = 85% окна
 
             function autosize(el) {
                 if (!el) return;
                 el.style.height = 'auto';
-                // добавим небольшой буфер на бордеры/паддинги
+                el.style.overflowY = 'hidden';
                 el.style.height = (el.scrollHeight + 2) + 'px';
             }
 
-            function isSingleColumn() {
-                return window.matchMedia('(max-width: 1024px)').matches;
-            }
-
-            function fitPair(ids) {
+            function fitPair(ids, alwaysEqual = true) {
                 const els = ids.map(id => document.getElementById(id)).filter(Boolean);
-                if (!els.length) return;
+                if (els.length === 0) return;
 
-                // сначала каждый под свой контент
+                // 1) каждый под свой контент
                 els.forEach(autosize);
 
-                // на десктопе выравниваем по максимальной высоте
-                if (!isSingleColumn() && els.length === 2) {
-                    const H = Math.max(els[0].scrollHeight, els[1].scrollHeight);
-                    els.forEach(el => el.style.height = H + 'px');
+                // 2) выравниваем ВСЕГДА (и на мобиле тоже)
+                if (alwaysEqual && els.length === 2) {
+                    const capPx = Math.round(window.innerHeight * (CAP_VH/100));
+                    const target = Math.min(
+                        Math.max(els[0].scrollHeight, els[1].scrollHeight), // самая большая
+                        capPx                                              // но не выше лимита
+                    );
+                    els.forEach(el => {
+                        el.style.height = target + 'px';
+                        // если контента больше, чем влезло — разрешим внутренний скролл
+                        el.style.overflowY = (el.scrollHeight > target) ? 'auto' : 'hidden';
+                    });
                 }
             }
 
@@ -2650,43 +2654,46 @@
                 if (el) autosize(el);
             }
 
-            // Навешиваем события на пары полей
-            textareaPairs.forEach(pair => {
-                pair.forEach(id => {
+            function bind() {
+                // Навешиваем события на пары полей
+                textareaPairs.forEach(pair => {
+                    pair.forEach(id => {
+                        const el = document.getElementById(id);
+                        if (!el) return;
+                        ['input','change','cut','paste'].forEach(ev => {
+                            el.addEventListener(ev, () => requestAnimationFrame(() => fitPair(pair, true)));
+                        });
+                    });
+                });
+
+                // Навешиваем события на одиночные поля
+                singleTextareas.forEach(id => {
                     const el = document.getElementById(id);
                     if (!el) return;
                     ['input','change','cut','paste'].forEach(ev => {
-                        el.addEventListener(ev, () => requestAnimationFrame(() => fitPair(pair)));
+                        el.addEventListener(ev, () => requestAnimationFrame(() => fitSingle(id)));
                     });
                 });
-            });
-
-            // Навешиваем события на одиночные поля
-            singleTextareas.forEach(id => {
-                const el = document.getElementById(id);
-                if (!el) return;
-                ['input','change','cut','paste'].forEach(ev => {
-                    el.addEventListener(ev, () => requestAnimationFrame(() => fitSingle(id)));
-                });
-            });
+            }
 
             // Пересчёт при ресайзе (изменится перенос строк)
             window.addEventListener('resize', () => {
                 clearTimeout(window.__fitTextareasT);
                 window.__fitTextareasT = setTimeout(() => {
-                    textareaPairs.forEach(fitPair);
+                    textareaPairs.forEach(pair => fitPair(pair, true));
                     singleTextareas.forEach(fitSingle);
                 }, 80);
             });
 
             // Глобальная функция для пересчёта после загрузки файлов
             window.fitTextareasNow = () => {
-                textareaPairs.forEach(fitPair);
+                textareaPairs.forEach(pair => fitPair(pair, true));
                 singleTextareas.forEach(fitSingle);
             };
 
-            // Первый расчёт
-            textareaPairs.forEach(fitPair);
+            // Инициализация
+            bind();
+            textareaPairs.forEach(pair => fitPair(pair, true));
             singleTextareas.forEach(fitSingle);
         }
     </script>
