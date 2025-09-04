@@ -9,7 +9,7 @@ module.exports = async function handler(req, res) {
   }
 
   try {
-    const { resumeText = '', vacancyText = '', language = 'ru', prompt, messages } = await readJson(req);
+    const { resumeText = '', vacancyText = '', language = 'ru', prompt, messages, model } = await readJson(req);
 
     const finalMessages = Array.isArray(messages) && messages.length
       ? messages
@@ -37,7 +37,7 @@ Constraints:
           ...(prompt ? [{ role: 'user', content: String(prompt) }] : [])
         ];
 
-    const { content } = await chatLLM({ messages: finalMessages, temperature: 0.4, maxTokens: 800 });
+    const { content } = await chatLLM({ messages: finalMessages, temperature: 0.4, maxTokens: 800, model });
     return res.status(200).json({ ok: true, coverLetter: content });
   } catch (e) {
     return res.status(400).json({ ok: false, error: String(e?.message || e) });

@@ -5,14 +5,14 @@ const { chatLLM } = require('./_llm');
 module.exports = async function handler(req, res) {
   if (req.method !== 'POST') { res.setHeader('Allow','POST'); return res.status(405).json({ error: 'Method Not Allowed' }); }
   try {
-    const { resumeText = '', vacancyText = '', language = 'ru', messages } = await readJson(req);
+    const { resumeText = '', vacancyText = '', language = 'ru', messages, model } = await readJson(req);
 
     const finalMessages = Array.isArray(messages) && messages.length ? messages : [
       { role: 'system', content: 'You are an ATS/HR assistant. Return STRICT JSON only. Schema: { "resume_score": number 0-100, "issues": string[], "suggestions": string[], "vacancy_match": number 0-100, "overlap_keywords": string[], "missing_keywords": string[], "cover_letter": string }. No markdown, no extra keys.' },
       { role: 'user', content: `Language: ${language}\nTask: (1) Score the resume for ATS/HR; (2) Compare with the vacancy; (3) Draft a short cover letter (6–9 sentences).\n\nResume:\n${resumeText}\n\nVacancy:\n${vacancyText}\n\nConstraints:\n- Use only provided information.\n- Keep arrays deduplicated and concise.\n- Return JSON EXACTLY in the schema above.` }
     ];
 
-    const { content } = await chatLLM({ messages: finalMessages, temperature: 0.25, maxTokens: 1400 });
+    const { content } = await chatLLM({ messages: finalMessages, temperature: 0.25, maxTokens: 1400, model });
     const json = parseJsonFromText(content);
 
     const result = {

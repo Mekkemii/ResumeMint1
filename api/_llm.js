@@ -1,7 +1,7 @@
 // api/_llm.js — OpenAI-compatible chat client (CommonJS)
 const fetch = global.fetch || require('node-fetch');
 
-module.exports.chatLLM = async function chatLLM({ messages, temperature = 0.3, maxTokens = 1200 }) {
+module.exports.chatLLM = async function chatLLM({ messages, temperature = 0.3, maxTokens = 1200, model }) {
   // Support multiple env names to reduce misconfig headaches
   const apiKey =
     process.env.LLM_API_KEY ||
@@ -16,14 +16,12 @@ module.exports.chatLLM = async function chatLLM({ messages, temperature = 0.3, m
     'https://api.openai.com/v1'
   ).replace(/\/$/, '');
 
-  const model = process.env.LLM_MODEL || process.env.OPENAI_MODEL || '';
+  const resolvedModel = model || process.env.LLM_MODEL || process.env.OPENAI_MODEL || '3.5turbo';
 
   if (!apiKey) {
     throw new Error('Missing API key (checked: LLM_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, ANTHROPIC_API_KEY)');
   }
-  if (!model) {
-    throw new Error('Missing model (set LLM_MODEL or OPENAI_MODEL)');
-  }
+  // resolvedModel always has a fallback
 
   const url = `${baseUrl}/chat/completions`;
 
@@ -33,7 +31,7 @@ module.exports.chatLLM = async function chatLLM({ messages, temperature = 0.3, m
       'Authorization': `Bearer ${apiKey}`,
       'Content-Type': 'application/json'
     },
-    body: JSON.stringify({ model, temperature, max_tokens: maxTokens, messages })
+    body: JSON.stringify({ model: resolvedModel, temperature, max_tokens: maxTokens, messages })
   });
 
   if (!resp.ok) {
