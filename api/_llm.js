@@ -2,13 +2,28 @@
 const fetch = global.fetch || require('node-fetch');
 
 module.exports.chatLLM = async function chatLLM({ messages, temperature = 0.3, maxTokens = 1200 }) {
-  const provider = process.env.LLM_PROVIDER || 'openai';
-  const apiKey   = process.env.LLM_API_KEY;
-  const baseUrl  = (process.env.LLM_BASE_URL || 'https://api.openai.com/v1').replace(/\/$/, '');
-  const model    = process.env.LLM_MODEL;
+  // Support multiple env names to reduce misconfig headaches
+  const apiKey =
+    process.env.LLM_API_KEY ||
+    process.env.OPENAI_API_KEY ||
+    process.env.OPENROUTER_API_KEY ||
+    process.env.ANTHROPIC_API_KEY;
 
-  if (!apiKey)  throw new Error('Missing LLM_API_KEY');
-  if (!model)   throw new Error('Missing LLM_MODEL');
+  const baseUrl = (
+    process.env.LLM_BASE_URL ||
+    process.env.OPENAI_BASE_URL ||
+    process.env.OPENROUTER_BASE_URL ||
+    'https://api.openai.com/v1'
+  ).replace(/\/$/, '');
+
+  const model = process.env.LLM_MODEL || process.env.OPENAI_MODEL || '';
+
+  if (!apiKey) {
+    throw new Error('Missing API key (checked: LLM_API_KEY, OPENAI_API_KEY, OPENROUTER_API_KEY, ANTHROPIC_API_KEY)');
+  }
+  if (!model) {
+    throw new Error('Missing model (set LLM_MODEL or OPENAI_MODEL)');
+  }
 
   const url = `${baseUrl}/chat/completions`;
 
@@ -28,7 +43,7 @@ module.exports.chatLLM = async function chatLLM({ messages, temperature = 0.3, m
 
   const data = await resp.json();
   const content = data?.choices?.[0]?.message?.content ?? data?.choices?.[0]?.text ?? '';
-  return { content, raw: data, provider };
+  return { content, raw: data };
 };
 
 
