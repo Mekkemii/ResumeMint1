@@ -687,23 +687,28 @@
           .io-grid { grid-template-columns: 1fr; }
         }
 
-        /* Поле ввода — тянется на всю колонку */
-        .text-area,
-        .text-input {
-          display: block;
-          inline-size: 100%;        /* ширина по родителю */
-          max-inline-size: 100%;    /* не вылезать за карточку */
+        /* одинаковая типографика и авто-рост */
+        .text-area {
+          width: 100%;
           box-sizing: border-box;
-          min-height: clamp(220px, 30svh, 480px);  /* адаптивная высота */
-          resize: vertical;         /* можно тянуть мышкой */
           background: #0f111a;
           color: #e7e7ea;
           border: 1px solid #2b2f45;
           border-radius: 12px;
           padding: 12px 14px;
-          line-height: 1.35;
+          font: 14px/1.35 ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
           white-space: pre-wrap;
           overflow-wrap: anywhere;
+          /* важно для авто-роста: */
+          overflow: hidden;      /* скрываем внутренний скролл */
+          resize: none;          /* отключаем «ручки», автосайз сделает лучше */
+          min-height: 220px;     /* стартовая высота */
+          max-height: 80svh;     /* чтобы не улетало за экран при огромном тексте */
+        }
+
+        /* на маленьких экранах ручки можно вернуть, если нравится */
+        @media (max-width: 600px) {
+          .text-area { resize: vertical; }
         }
 
         /* чтобы ничего внутри формы не выходило за контейнер */
@@ -1715,6 +1720,8 @@
                     const text = await fileToText(file);
                     document.getElementById('review-resume').value = text;
                     updateRunButtons();
+                    // Пересчитываем высоту после загрузки файла
+                    if (window.fitTextareasNow) window.fitTextareasNow();
                 } catch (e) {
                     alert('Ошибка чтения файла: ' + e.message);
                 }
@@ -1728,6 +1735,8 @@
                     const text = await fileToText(file);
                     document.getElementById(`compare-${field}`).value = text;
                     updateRunButtons();
+                    // Пересчитываем высоту после загрузки файла
+                    if (window.fitTextareasNow) window.fitTextareasNow();
                 } catch (e) {
                     alert('Ошибка чтения файла: ' + e.message);
                 }
@@ -1743,6 +1752,8 @@
                     const text = await fileToText(file);
                     document.getElementById(`cover-${field}`).value = text;
                     updateRunButtons();
+                    // Пересчитываем высоту после загрузки файла
+                    if (window.fitTextareasNow) window.fitTextareasNow();
                 } catch (e) {
                     alert('Ошибка чтения файла: ' + e.message);
                 }
@@ -1756,6 +1767,8 @@
                     const text = await fileToText(file);
                     document.getElementById(`premium-${field}`).value = text;
                     updateRunButtons();
+                    // Пересчитываем высоту после загрузки файла
+                    if (window.fitTextareasNow) window.fitTextareasNow();
                 } catch (e) {
                     alert('Ошибка чтения файла: ' + e.message);
                 }
@@ -1803,18 +1816,8 @@
             const reviewBtn = document.querySelector('[onclick="openPanel(\'review\')"]');
             if (reviewBtn) reviewBtn.classList.add('active');
             
-            // Автоподгонка высоты текстовых полей
-            const textareaIds = ['review-resume', 'compare-resume', 'compare-job', 'cover-resume', 'cover-job', 'premium-resume', 'premium-job'];
-            textareaIds.forEach(id => {
-                const ta = document.getElementById(id);
-                if (!ta) return;
-                const fit = () => { 
-                    ta.style.height = 'auto'; 
-                    ta.style.height = Math.min(ta.scrollHeight, 1200) + 'px'; 
-                };
-                ['input', 'change'].forEach(ev => ta.addEventListener(ev, fit));
-                fit();
-            });
+            // Умная автоподгонка высоты текстовых полей
+            initializeSmartTextareas();
         });
 
         function showAnalysis() {
@@ -2604,6 +2607,88 @@
         }
 
         // Legacy functions removed - no longer needed
+
+        // Умная автоподгонка высоты текстовых полей
+        function initializeSmartTextareas() {
+            // Пары полей для синхронизации высоты на десктопе
+            const textareaPairs = [
+                ['compare-resume', 'compare-job'],
+                ['cover-resume', 'cover-job'], 
+                ['premium-resume', 'premium-job']
+            ];
+            
+            // Одиночные поля
+            const singleTextareas = ['review-resume'];
+
+            function autosize(el) {
+                if (!el) return;
+                el.style.height = 'auto';
+                // добавим небольшой буфер на бордеры/паддинги
+                el.style.height = (el.scrollHeight + 2) + 'px';
+            }
+
+            function isSingleColumn() {
+                return window.matchMedia('(max-width: 1024px)').matches;
+            }
+
+            function fitPair(ids) {
+                const els = ids.map(id => document.getElementById(id)).filter(Boolean);
+                if (!els.length) return;
+
+                // сначала каждый под свой контент
+                els.forEach(autosize);
+
+                // на десктопе выравниваем по максимальной высоте
+                if (!isSingleColumn() && els.length === 2) {
+                    const H = Math.max(els[0].scrollHeight, els[1].scrollHeight);
+                    els.forEach(el => el.style.height = H + 'px');
+                }
+            }
+
+            function fitSingle(id) {
+                const el = document.getElementById(id);
+                if (el) autosize(el);
+            }
+
+            // Навешиваем события на пары полей
+            textareaPairs.forEach(pair => {
+                pair.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (!el) return;
+                    ['input','change','cut','paste'].forEach(ev => {
+                        el.addEventListener(ev, () => requestAnimationFrame(() => fitPair(pair)));
+                    });
+                });
+            });
+
+            // Навешиваем события на одиночные поля
+            singleTextareas.forEach(id => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                ['input','change','cut','paste'].forEach(ev => {
+                    el.addEventListener(ev, () => requestAnimationFrame(() => fitSingle(id)));
+                });
+            });
+
+            // Пересчёт при ресайзе (изменится перенос строк)
+            window.addEventListener('resize', () => {
+                clearTimeout(window.__fitTextareasT);
+                window.__fitTextareasT = setTimeout(() => {
+                    textareaPairs.forEach(fitPair);
+                    singleTextareas.forEach(fitSingle);
+                }, 80);
+            });
+
+            // Глобальная функция для пересчёта после загрузки файлов
+            window.fitTextareasNow = () => {
+                textareaPairs.forEach(fitPair);
+                singleTextareas.forEach(fitSingle);
+            };
+
+            // Первый расчёт
+            textareaPairs.forEach(fitPair);
+            singleTextareas.forEach(fitSingle);
+        }
     </script>
 </body>
 </html>
