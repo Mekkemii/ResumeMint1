@@ -750,14 +750,46 @@
           .btn-primary{ width:100%; padding:14px 18px; }  /* крупные клики */
           .actions{ position:sticky; bottom:calc(env(safe-area-inset-bottom) + 8px);
                     z-index:10; padding:8px 0; background:linear-gradient(180deg, transparent, rgba(12,13,18,.9)); }
-          /* сводку результата делаем «аккордеоном» над деталями */
-          .results-sidebar{ border-radius:10px; padding:10px; }
         }
 
         /* безопасные отступы для вырезов (iPhone, Pixel) */
         @supports (padding: max(0px)) {
           .container { padding-left: max(12px, env(safe-area-inset-left));
                        padding-right:max(12px, env(safe-area-inset-right)); }
+        }
+
+        /* === БАЗА ДЛЯ ВЫВОДА === */
+        .results-wide{ width:100%; max-width:none; }
+        .results-grid{ display:grid; grid-template-columns:340px minmax(0,1fr); gap:16px; }
+        .results-grid > *{ min-width:0; }          /* ВАЖНО: даём детям грида сжиматься */
+        .results-sidebar,
+        .results-main{
+          max-width:100%;
+          overflow-x:hidden;                       /* не вываливаться за экран */
+          overflow-y:auto;
+          word-break:break-word;
+          overflow-wrap:anywhere;
+          min-height:0;
+        }
+        .results-main pre,
+        .results-main code{
+          white-space:pre-wrap;                    /* длинные строки в коде/пре переносятся */
+        }
+        .results-main table{
+          display:block; width:100%; overflow-x:auto; /* если придёт таблица */
+        }
+
+        /* === МОБИЛКА: всё в ОДИН столбец, без бокового клипа === */
+        @media (max-width: 600px){
+          .results-wide{ padding:12px; min-height:auto; border-radius:12px; }
+          .results-grid{ grid-template-columns:1fr; gap:10px; }
+          .results-sidebar,.results-main{ padding:12px; }
+        }
+
+        /* безопасные поля для экранов с вырезом */
+        @supports (padding: max(0px)){
+          .container{ padding-left:max(12px, env(safe-area-inset-left));
+                      padding-right:max(12px, env(safe-area-inset-right)); }
         }
 
         /* файлы на мобиле */
@@ -2043,6 +2075,13 @@
                 setBlock('res-review', html);
                 if (btn) { btn.disabled = false; btn.textContent = prev; }
                 
+                // Прокручиваем к результатам
+                const resultsSection = document.getElementById('results');
+                if (resultsSection) {
+                    resultsSection.style.display = 'block';
+                    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                
                 // Загружаем сохраненные ответы после создания окна
                 if (data.questions?.length > 0) {
                     setTimeout(() => {
@@ -2203,6 +2242,13 @@
                 
                 setBlock('res-summary', html);
                 if (btn) { btn.disabled = false; btn.textContent = prev; }
+                
+                // Прокручиваем к результатам
+                const resultsSection = document.getElementById('results');
+                if (resultsSection) {
+                    resultsSection.style.display = 'block';
+                    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
             } catch (e) { 
                 setBlock('res-summary','Ошибка матчинга: ' + e.message); 
                 if (btn) { btn.disabled = false; btn.textContent = prev; }
@@ -2229,6 +2275,13 @@
                   setBlock('res-cover','Сопроводительное не сгенерировано');
                 }
                 if (btn) { btn.disabled = false; btn.textContent = prev; }
+                
+                // Прокручиваем к результатам
+                const resultsSection = document.getElementById('results');
+                if (resultsSection) {
+                    resultsSection.style.display = 'block';
+                    resultsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
             } catch (e) { setBlock('res-cover','Ошибка письма: ' + e.message); }
         }
         
