@@ -1675,8 +1675,16 @@
                 const btn = document.querySelector('[onclick="runReviewFromPanel()"]');
                 const prev = btn ? btn.textContent : '';
                 if (btn) { btn.disabled = true; btn.textContent = 'Считаем…'; }
-                // Универсальный анализатор (резюме; jobText опционален)
-                const data = await postJSON('/api/analyze', { resumeText: resume });
+                // Универсальный анализатор через /api/all (используем только блок evaluate)
+                const allData = await postJSON('/api/all', { resumeText: resume });
+                const eva = allData?.evaluate?.analysis || allData?.evaluate || {};
+                const data = {
+                  grade: typeof eva?.grade === 'string' ? { level: eva.grade } : (eva?.grade || {}),
+                  summary: eva?.summary,
+                  strengths: eva?.strengths || [],
+                  gaps: eva?.gaps || [],
+                  ats_warnings: eva?.ats_issues || eva?.ats_warnings || []
+                };
                 
                 // Формируем HTML для вывода результата
                 let html = `<div class="review-result">`;
