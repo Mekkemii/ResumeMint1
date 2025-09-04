@@ -1,8 +1,11 @@
 {
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
   "functions": {
-    "api/parse.js": { "maxDuration": 10, "memory": 1024 },
-    "api/vacancy/detailed-match.js": { "maxDuration": 20, "memory": 256 },
-    "api/cover.js": { "maxDuration": 20, "memory": 256 },
-    "api/all.js": { "maxDuration": 25, "memory": 512 }
-  }
+    "api/*.js": { "runtime": "nodejs22.x", "maxDuration": 60 }
+  },
+  "rewrites": [
+    { "source": "/api/(.*)", "destination": "/api/$1" },
+    { "source": "/(.*)", "destination": "/index.html" }
+  ]
 }
