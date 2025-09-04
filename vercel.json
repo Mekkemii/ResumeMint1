@@ -1,5 +1,6 @@
 {
   "functions": {
-    "api/parse.js": { "maxDuration": 10, "memory": 1024 }
+    "api/parse.js": { "maxDuration": 10, "memory": 1024 },
+    "api/vacancy/detailed-match.js": { "maxDuration": 20, "memory": 256 }
   }
 }
