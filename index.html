@@ -554,7 +554,7 @@
         .form-group {
             margin-bottom: 20px;
         }
-        
+
         .form-group label {
             font-size: 14px;
             color: #9aa0b4;
@@ -671,14 +671,51 @@
         .page { overflow-x: hidden; background:#0c0d12; color:#e7e7ea; }
         .container { max-width:none; width:100%; padding:16px; }
 
-        /* текстовые поля */
-        .text-area, .text-input{
-          width:100%;
-          background:#0f111a; color:#e7e7ea;
-          border:1px solid #2b2f45; border-radius:12px;
-          padding:12px 14px; line-height:1.4;
-          white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word;
-          -webkit-overflow-scrolling:touch;
+        /* Контейнер секции */
+        .section { width: 100%; }
+
+        /* Сетка для двух полей: резюме/вакансия */
+        .io-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;   /* десктоп: 2 колонки */
+          gap: 16px;
+          width: 100%;
+        }
+
+        /* Мобильная раскладка: 1 колонка */
+        @media (max-width: 1024px) {
+          .io-grid { grid-template-columns: 1fr; }
+        }
+
+        /* Поле ввода — тянется на всю колонку */
+        .text-area,
+        .text-input {
+          display: block;
+          inline-size: 100%;        /* ширина по родителю */
+          max-inline-size: 100%;    /* не вылезать за карточку */
+          box-sizing: border-box;
+          min-height: clamp(220px, 30svh, 480px);  /* адаптивная высота */
+          resize: vertical;         /* можно тянуть мышкой */
+          background: #0f111a;
+          color: #e7e7ea;
+          border: 1px solid #2b2f45;
+          border-radius: 12px;
+          padding: 12px 14px;
+          line-height: 1.35;
+          white-space: pre-wrap;
+          overflow-wrap: anywhere;
+        }
+
+        /* чтобы ничего внутри формы не выходило за контейнер */
+        .form-card, .form-card * { max-inline-size: 100%; }
+
+        /* заголовки полей */
+        .field-title {
+            font-size: 14px;
+            color: #9aa0b4;
+            margin-bottom: 8px;
+            font-weight: 600;
+            display: block;
         }
 
         /* блок результатов (десктоп) */
@@ -1328,14 +1365,14 @@
                     </div>
 
                     <!-- Панель Оценка резюме -->
-                    <div id="panel-review" class="form-panel" style="display: block;">
+                    <div id="panel-review" class="form-panel section form-card" style="display: block;">
                         <div class="panel-header">
                             <h3>Оценка резюме (HR + Грейд + ATS)</h3>
                             <p class="panel-hint">Структура, качество текста, сильные/слабые стороны, грейд с обоснованием и ATS-совместимость</p>
                         </div>
                         <div class="panel-content">
                             <div class="form-group">
-                                <label>Текст резюме:</label>
+                                <label class="field-title">Текст резюме:</label>
                                 <textarea id="review-resume" class="text-area" placeholder="Вставьте текст резюме..."></textarea>
                                 <input type="file" accept=".txt,.md,.doc,.docx,.pdf" onchange="handleReviewFile(event)" class="file-input">
                             </div>
@@ -1347,20 +1384,20 @@
                     </div>
 
                     <!-- Панель Матчинг вакансии -->
-                    <div id="panel-compare" class="form-panel" style="display: none;">
+                    <div id="panel-compare" class="form-panel section form-card" style="display: none;">
                         <div class="panel-header">
                             <h3>Матчинг вакансии: анализ JD + требуемый грейд + сопоставление</h3>
                             <p class="panel-hint">Вставьте резюме и вакансию для комплексного анализа</p>
                         </div>
                         <div class="panel-content">
-                            <div class="form-row grid-two">
+                            <div class="io-grid">
                                 <div class="form-group">
-                                    <label>Текст резюме:</label>
+                                    <label class="field-title">Текст резюме:</label>
                                     <textarea id="compare-resume" class="text-area" placeholder="Вставьте текст резюме..."></textarea>
                                     <input type="file" accept=".txt,.md,.doc,.docx,.pdf" onchange="handleCompareFile(event, 'resume')" class="file-input">
                                 </div>
                                 <div class="form-group">
-                                    <label>Текст вакансии:</label>
+                                    <label class="field-title">Текст вакансии:</label>
                                     <textarea id="compare-job" class="text-area" placeholder="Вставьте текст вакансии..."></textarea>
                                     <input type="file" accept=".txt,.md,.doc,.docx,.pdf" onchange="handleCompareFile(event, 'job')" class="file-input">
                                 </div>
@@ -1374,20 +1411,20 @@
 
 
                     <!-- Панель Сопроводительное -->
-                    <div id="panel-cover" class="form-panel" style="display: none;">
+                    <div id="panel-cover" class="form-panel section form-card" style="display: none;">
                         <div class="panel-header">
                             <h3>Сопроводительное письмо</h3>
                             <p class="panel-hint">Нужны выжимка резюме и описание вакансии</p>
                         </div>
                         <div class="panel-content">
-                            <div class="form-row grid-two">
+                            <div class="io-grid">
                                 <div class="form-group">
-                                    <label>Выжимка резюме:</label>
+                                    <label class="field-title">Выжимка резюме:</label>
                                     <textarea id="cover-resume" class="text-area" placeholder="Вставьте выжимку резюме..."></textarea>
                                     <input type="file" accept=".txt,.md,.doc,.docx,.pdf" onchange="handleCoverFile(event, 'resume')" class="file-input">
                                 </div>
                                 <div class="form-group">
-                                    <label>Описание вакансии:</label>
+                                    <label class="field-title">Описание вакансии:</label>
                                     <textarea id="cover-job" class="text-area" placeholder="Вставьте описание вакансии..."></textarea>
                                     <input type="file" accept=".txt,.md,.doc,.docx,.pdf" onchange="handleCoverFile(event, 'job')" class="file-input">
                                 </div>
@@ -1399,20 +1436,20 @@
                     </div>
 
                     <!-- Панель Premium -->
-                    <div id="panel-premium" class="form-panel" style="display: none;">
+                    <div id="panel-premium" class="form-panel section form-card" style="display: none;">
                         <div class="panel-header">
                             <h3>Всё сразу</h3>
                             <p class="panel-hint">Полный пакет: выжимка, JD, сопоставление, письмо</p>
                         </div>
                         <div class="panel-content">
-                            <div class="form-row grid-two">
+                            <div class="io-grid">
                                 <div class="form-group">
-                                    <label>Текст резюме:</label>
+                                    <label class="field-title">Текст резюме:</label>
                                     <textarea id="premium-resume" class="text-area" placeholder="Вставьте текст резюме..."></textarea>
                                     <input type="file" accept=".txt,.md,.doc,.docx,.pdf" onchange="handlePremiumFile(event, 'resume')" class="file-input">
                                 </div>
                                 <div class="form-group">
-                                    <label>Текст вакансии:</label>
+                                    <label class="field-title">Текст вакансии:</label>
                                     <textarea id="premium-job" class="text-area" placeholder="Вставьте текст вакансии..."></textarea>
                                     <input type="file" accept=".txt,.md,.doc,.docx,.pdf" onchange="handlePremiumFile(event, 'job')" class="file-input">
                                 </div>
@@ -1765,6 +1802,19 @@
             // Устанавливаем активную кнопку review по умолчанию
             const reviewBtn = document.querySelector('[onclick="openPanel(\'review\')"]');
             if (reviewBtn) reviewBtn.classList.add('active');
+            
+            // Автоподгонка высоты текстовых полей
+            const textareaIds = ['review-resume', 'compare-resume', 'compare-job', 'cover-resume', 'cover-job', 'premium-resume', 'premium-job'];
+            textareaIds.forEach(id => {
+                const ta = document.getElementById(id);
+                if (!ta) return;
+                const fit = () => { 
+                    ta.style.height = 'auto'; 
+                    ta.style.height = Math.min(ta.scrollHeight, 1200) + 'px'; 
+                };
+                ['input', 'change'].forEach(ev => ta.addEventListener(ev, fit));
+                fit();
+            });
         });
 
         function showAnalysis() {
