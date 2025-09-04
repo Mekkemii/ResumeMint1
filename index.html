@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>ResumeMint - AI ассистент для анализа резюме</title>
     <style>
         * {
@@ -666,6 +666,68 @@
             color: #374151;
         }
 
+        /* базовые улучшения */
+        html { font-size: clamp(14px, 1.8vw, 16px); }
+        .page { overflow-x: hidden; background:#0c0d12; color:#e7e7ea; }
+        .container { max-width:none; width:100%; padding:16px; }
+
+        /* текстовые поля */
+        .text-area, .text-input{
+          width:100%;
+          background:#0f111a; color:#e7e7ea;
+          border:1px solid #2b2f45; border-radius:12px;
+          padding:12px 14px; line-height:1.4;
+          white-space:pre-wrap; overflow-wrap:anywhere; word-break:break-word;
+          -webkit-overflow-scrolling:touch;
+        }
+
+        /* блок результатов (десктоп) */
+        .results-wide{ width:100%; margin-top:16px; background:#141622;
+          border:1px solid #23263a; border-radius:14px; box-shadow:0 8px 24px rgba(0,0,0,.25);
+          padding:16px; min-height:72vh;
+        }
+        .results-grid{ display:grid; grid-template-columns:340px minmax(0,1fr); gap:16px; height:100%; }
+        .results-sidebar{ background:#10121b; border:1px solid #23263a; border-radius:12px; padding:12px; overflow:auto; }
+        .results-main{ background:#0f111a; border:1px solid #23263a; border-radius:12px; padding:16px; overflow:auto; }
+
+        /* кнопки */
+        .btn-primary{ background:#ff8a00; color:#11131a; border:0; border-radius:12px; padding:12px 18px; font-weight:600; }
+        .actions{ display:flex; gap:12px; flex-wrap:wrap; }
+
+        /* ====== АДАПТИВ ====== */
+        @media (max-width: 1024px){
+          .grid-two{ display:grid; grid-template-columns:1fr; gap:12px; }
+          .results-grid{ grid-template-columns:1fr; }
+          .results-wide{ min-height:auto; padding:12px; }
+          .text-area{ min-height:320px; }
+        }
+
+        /*— компакт для телефонов —*/
+        @media (max-width: 600px){
+          .container{ padding:12px; }
+          .text-area{ min-height:240px; font-size:14px; }
+          .btn-primary{ width:100%; padding:14px 18px; }  /* крупные клики */
+          .actions{ position:sticky; bottom:calc(env(safe-area-inset-bottom) + 8px);
+                    z-index:10; padding:8px 0; background:linear-gradient(180deg, transparent, rgba(12,13,18,.9)); }
+          /* сводку результата делаем «аккордеоном» над деталями */
+          .results-sidebar{ border-radius:10px; padding:10px; }
+        }
+
+        /* безопасные отступы для вырезов (iPhone, Pixel) */
+        @supports (padding: max(0px)) {
+          .container { padding-left: max(12px, env(safe-area-inset-left));
+                       padding-right:max(12px, env(safe-area-inset-right)); }
+        }
+
+        /* файлы на мобиле */
+        @media (max-width:600px){
+          label[for="resumeFile"], label[for="vacancyFile"]{ width:100%; text-align:center; }
+        }
+
+        /* длинные списки */
+        .results-main ul{ padding-left:18px; margin:0; }
+        .results-main li{ margin:2px 0; }
+
         /* Адаптивность */
         @media (max-width: 1024px) {
             .form-row {
@@ -1226,7 +1288,7 @@
     </nav>
 
     <!-- Основной контент -->
-    <main class="main-content">
+    <main class="main-content page">
         <!-- Героическая секция -->
         <section class="hero-section">
             <div class="rm-container text-center">
@@ -1253,7 +1315,7 @@
 
         <!-- Секция анализа резюме -->
         <section id="analysisSection" class="analysis-section">
-            <div class="rm-container rm-nudge">
+            <div class="rm-container container rm-nudge">
                 <h2 class="analysis-title" style="text-align: center;">Анализ резюме</h2>
                 
                 <div class="form-container">
@@ -1274,12 +1336,12 @@
                         <div class="panel-content">
                             <div class="form-group">
                                 <label>Текст резюме:</label>
-                                <textarea id="review-resume" placeholder="Вставьте текст резюме..."></textarea>
+                                <textarea id="review-resume" class="text-area" placeholder="Вставьте текст резюме..."></textarea>
                                 <input type="file" accept=".txt,.md,.doc,.docx,.pdf" onchange="handleReviewFile(event)" class="file-input">
                             </div>
 
-                            <div class="panel-actions">
-                                <button class="run-btn" onclick="runReviewFromPanel()" disabled>Запустить оценку резюме</button>
+                            <div class="panel-actions actions">
+                                <button class="run-btn btn-primary" onclick="runReviewFromPanel()" disabled>Запустить оценку резюме</button>
                             </div>
                         </div>
                     </div>
@@ -1291,20 +1353,20 @@
                             <p class="panel-hint">Вставьте резюме и вакансию для комплексного анализа</p>
                         </div>
                         <div class="panel-content">
-                            <div class="form-row">
+                            <div class="form-row grid-two">
                                 <div class="form-group">
                                     <label>Текст резюме:</label>
-                                    <textarea id="compare-resume" placeholder="Вставьте текст резюме..."></textarea>
+                                    <textarea id="compare-resume" class="text-area" placeholder="Вставьте текст резюме..."></textarea>
                                     <input type="file" accept=".txt,.md,.doc,.docx,.pdf" onchange="handleCompareFile(event, 'resume')" class="file-input">
                                 </div>
                                 <div class="form-group">
                                     <label>Текст вакансии:</label>
-                                    <textarea id="compare-job" placeholder="Вставьте текст вакансии..."></textarea>
+                                    <textarea id="compare-job" class="text-area" placeholder="Вставьте текст вакансии..."></textarea>
                                     <input type="file" accept=".txt,.md,.doc,.docx,.pdf" onchange="handleCompareFile(event, 'job')" class="file-input">
                                 </div>
                             </div>
-                            <div class="panel-actions">
-                                <button class="run-btn" onclick="runCompareFromPanel()" disabled>Запустить матчинг вакансии</button>
+                            <div class="panel-actions actions">
+                                <button class="run-btn btn-primary" onclick="runCompareFromPanel()" disabled>Запустить матчинг вакансии</button>
                             </div>
                         </div>
                     </div>
@@ -1318,20 +1380,20 @@
                             <p class="panel-hint">Нужны выжимка резюме и описание вакансии</p>
                         </div>
                         <div class="panel-content">
-                            <div class="form-row">
+                            <div class="form-row grid-two">
                                 <div class="form-group">
                                     <label>Выжимка резюме:</label>
-                                    <textarea id="cover-resume" placeholder="Вставьте выжимку резюме..."></textarea>
+                                    <textarea id="cover-resume" class="text-area" placeholder="Вставьте выжимку резюме..."></textarea>
                                     <input type="file" accept=".txt,.md,.doc,.docx,.pdf" onchange="handleCoverFile(event, 'resume')" class="file-input">
                                 </div>
                                 <div class="form-group">
                                     <label>Описание вакансии:</label>
-                                    <textarea id="cover-job" placeholder="Вставьте описание вакансии..."></textarea>
+                                    <textarea id="cover-job" class="text-area" placeholder="Вставьте описание вакансии..."></textarea>
                                     <input type="file" accept=".txt,.md,.doc,.docx,.pdf" onchange="handleCoverFile(event, 'job')" class="file-input">
                                 </div>
                             </div>
-                            <div class="panel-actions">
-                                <button class="run-btn" onclick="runCoverFromPanel()" disabled>Сгенерировать письмо</button>
+                            <div class="panel-actions actions">
+                                <button class="run-btn btn-primary" onclick="runCoverFromPanel()" disabled>Сгенерировать письмо</button>
                             </div>
                         </div>
                     </div>
@@ -1343,20 +1405,20 @@
                             <p class="panel-hint">Полный пакет: выжимка, JD, сопоставление, письмо</p>
                         </div>
                         <div class="panel-content">
-                            <div class="form-row">
+                            <div class="form-row grid-two">
                                 <div class="form-group">
                                     <label>Текст резюме:</label>
-                                    <textarea id="premium-resume" placeholder="Вставьте текст резюме..."></textarea>
+                                    <textarea id="premium-resume" class="text-area" placeholder="Вставьте текст резюме..."></textarea>
                                     <input type="file" accept=".txt,.md,.doc,.docx,.pdf" onchange="handlePremiumFile(event, 'resume')" class="file-input">
                                 </div>
                                 <div class="form-group">
                                     <label>Текст вакансии:</label>
-                                    <textarea id="premium-job" placeholder="Вставьте текст вакансии..."></textarea>
+                                    <textarea id="premium-job" class="text-area" placeholder="Вставьте текст вакансии..."></textarea>
                                     <input type="file" accept=".txt,.md,.doc,.docx,.pdf" onchange="handlePremiumFile(event, 'job')" class="file-input">
                                 </div>
                             </div>
-                            <div class="panel-actions">
-                                <button class="run-btn premium" onclick="runPremiumFromPanel()" disabled>Запустить всё сразу</button>
+                            <div class="panel-actions actions">
+                                <button class="run-btn premium btn-primary" onclick="runPremiumFromPanel()" disabled>Запустить всё сразу</button>
                             </div>
                         </div>
                     </div>
