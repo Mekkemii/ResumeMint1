@@ -1954,8 +1954,8 @@
                 const btn = document.querySelector('[onclick="runCoverFromPanel()"]');
                 const prev = btn ? btn.textContent : '';
                 if (btn) { btn.disabled = true; btn.textContent = 'Генерируем письмо…'; }
-                const data = await postJSON('/api/cover', { resumeText: resume, jobText: job });
-                const letter = data.letter || data.cover_letter;
+                const data = await postJSON('/api/cover-letter', { resumeText: resume, vacancyText: job });
+                const letter = data.coverLetter || data.letter || data.cover_letter;
                 if (letter) {
                   setBlock('res-cover',`<b>Сопроводительное:</b><div style='margin-top:6px; white-space:pre-wrap;'>${letter}</div>`);
                 } else {
@@ -1978,8 +1978,8 @@
                 // Запускаем все анализы параллельно
                 const [detailedMatch, resumeAnalysis, coverLetter] = await Promise.all([
                     postJSON('/api/vacancy/detailed-match', { resumeText: resume, jobText: job }),
-                    postJSON('/api/analyze', { resumeText: resume }),
-                    postJSON('/api/cover', { resumeText: resume, jobText: job })
+                    postJSON('/api/resume-score', { resumeText: resume }),
+                    postJSON('/api/cover-letter', { resumeText: resume, vacancyText: job })
                 ]);
                 
                 // Анализ резюме
@@ -2103,11 +2103,11 @@
                 }
                 
                 // Сопроводительное письмо
-                if (coverLetter && (coverLetter.letter || coverLetter.cover_letter)) {
+                if (coverLetter && (coverLetter.coverLetter || coverLetter.letter || coverLetter.cover_letter)) {
                     let html = '<div style="font-size: 14px;">';
                     html += `<h4 style="font-size: 16px; color: #10b981; margin-bottom: 8px;">📝 Сопроводительное письмо</h4>`;
                     html += `<div style="padding: 16px; background: rgba(16, 185, 129, 0.1); border-radius: 8px; border-left: 4px solid #10b981;">`;
-                    html += `<div style="white-space: pre-wrap; line-height: 1.6;">${coverLetter.letter || coverLetter.cover_letter}</div>`;
+                    html += `<div style="white-space: pre-wrap; line-height: 1.6;">${coverLetter.coverLetter || coverLetter.letter || coverLetter.cover_letter}</div>`;
                     html += `</div>`;
                     html += '</div>';
                     setBlock('res-cover', html);
